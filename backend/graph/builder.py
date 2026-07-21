@@ -31,6 +31,12 @@ class TransactionGraph:
         """
         self.data = pd.read_csv(file_path)
 
+    def load_transactions(self, file_path: str):
+        """
+        Alias for load_csv() — Sprint 5 ke naming convention ke mutabiq.
+        """
+        self.load_csv(file_path)
+
     def build_graph(self):
         """
         Loaded data se graph banata hai — nodes aur edges add karta hai.
@@ -77,6 +83,20 @@ class TransactionGraph:
         """
         return list(self.graph.edges(data=True))
 
+    def draw_graph(self, output_path: str = "wallet_graph.html") -> str:
+        """
+        Graph ko interactive HTML visualization mein convert karta hai.
+        Ye GraphVisualizer class ko internally use karta hai.
+
+        Args:
+            output_path (str): Output HTML file ka path
+
+        Returns:
+            str: Saved HTML file ka path
+        """
+        from graph.visualization import graph_visualizer
+        return graph_visualizer.visualize(self.graph, output_path)
+
     def save_graph(self, file_path: str):
         """
         Graph ko GraphML file mein save karta hai (future use ke liye,
@@ -104,6 +124,8 @@ class TransactionGraph:
                 "average_degree": 0,
                 "density": 0,
                 "connected_components": 0,
+                "most_connected_wallet": None,
+                "most_connected_wallet_degree": 0,
             }
 
         # Average degree = kitne edges average per node hain
@@ -116,10 +138,17 @@ class TransactionGraph:
         undirected_graph = self.graph.to_undirected()
         connected_components = nx.number_connected_components(undirected_graph)
 
+        # Most Connected Wallet = jis wallet ke sabse zyada connections (degree) hain
+        degree_dict = dict(self.graph.degree())
+        most_connected_wallet = max(degree_dict, key=degree_dict.get)
+        most_connected_wallet_degree = degree_dict[most_connected_wallet]
+
         return {
             "num_wallets": num_nodes,
             "num_transactions": num_edges,
             "average_degree": round(average_degree, 2),
             "density": round(density, 6),
             "connected_components": connected_components,
+            "most_connected_wallet": most_connected_wallet,
+            "most_connected_wallet_degree": most_connected_wallet_degree,
         }
