@@ -7,14 +7,15 @@ from api.features import router as features_router
 from api.relationships import router as relationships_router
 from api.attribution import router as attribution_router
 from api.intelligence import router as intelligence_router
-from api.intelligence import router as intelligence_router
 from api.ai import router as ai_router
+from api.hybrid import router as hybrid_router
 
 app = FastAPI(
     title="Cross Chain Intelligence Platform",
     version="1.0.0"
 )
 
+# Routers ko app mein include karte hain
 app.include_router(network_router)
 app.include_router(wallet_router)
 app.include_router(transactions_router)
@@ -23,8 +24,8 @@ app.include_router(features_router)
 app.include_router(relationships_router)
 app.include_router(attribution_router)
 app.include_router(intelligence_router)
-app.include_router(intelligence_router)
 app.include_router(ai_router)
+app.include_router(hybrid_router)
 
 
 @app.get("/")

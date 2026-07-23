@@ -1,0 +1,6 @@
+{
+    "rule": 0.40,
+    "embedding": 0.35,
+    "relationship": 0.15,
+    "risk": 0.10
+}
