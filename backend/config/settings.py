@@ -27,6 +27,10 @@ class Settings:
     # Ethereum Mainnet RPC URL (Alchemy key ke saath banaya gaya)
     ALCHEMY_URL: str = f"https://eth-mainnet.g.alchemy.com/v2/{ALCHEMY_API_KEY}"
 
+    NEO4J_URI: str = os.getenv("NEO4J_URI")
+    NEO4J_USER: str = os.getenv("NEO4J_USER")
+    NEO4J_PASSWORD: str = os.getenv("NEO4J_PASSWORD")
+
 
 # Ek single instance banate hain jo poore project mein import hoga
 settings = Settings()
