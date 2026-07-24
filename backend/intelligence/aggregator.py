@@ -1,7 +1,7 @@
 """
 Intelligence Aggregator
 
-Ye module har alag engine (Features, Graph, Relationships, Attribution,
+Ye module har alag engine (Features, Graph, Relationships, AI/Node2Vec,
 Risk) ka output collect karta hai aur ek single wallet ke liye
 saara data ek jagah jama karta hai.
 """
@@ -10,6 +10,7 @@ from features.extractor import feature_extractor
 from analytics.relationship_engine import relationship_engine
 from analytics.clustering import cluster_analyzer
 from analytics.centrality import centrality_analyzer
+from ai.node2vec_model import node2vec_trainer
 
 
 class IntelligenceAggregator:
@@ -30,7 +31,7 @@ class IntelligenceAggregator:
 
         Returns:
             dict: Combined data — transactions, graph connections,
-                  cluster, centrality, risk score (placeholder)
+                  cluster, centrality, AI embedding info, risk score (placeholder)
         """
         wallet = wallet_address.lower()
 
@@ -52,6 +53,11 @@ class IntelligenceAggregator:
             all_centrality = centrality_analyzer.analyze_all(graph)
             centrality_score = all_centrality.get(wallet, {}).get("degree", 0.0)
 
+        # AI Engine se embedding availability check karte hain
+        embeddings = node2vec_trainer.load_embeddings()
+        has_ai_embedding = wallet in embeddings
+        embedding_dimension = len(embeddings[wallet]) if has_ai_embedding else 0
+
         # Risk Engine abhi implement nahi hua — placeholder rakha hai,
         # jab Risk Engine banega, isay yahan connect kar denge
         risk_score = None
@@ -63,6 +69,8 @@ class IntelligenceAggregator:
             "graph_connections": graph_connections,
             "cluster": cluster,
             "centrality_score": centrality_score,
+            "has_ai_embedding": has_ai_embedding,
+            "embedding_dimension": embedding_dimension,
             "risk_score": risk_score,
             "total_sent_eth": profile_data.get("total_sent_eth", 0),
             "total_received_eth": profile_data.get("total_received_eth", 0),
