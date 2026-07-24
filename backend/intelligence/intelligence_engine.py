@@ -1,13 +1,15 @@
 """
 Intelligence Engine
 
-Ye main module hai jo Aggregator, Evidence Builder, aur Summary
-Engine — teeno ko combine karke ek complete investigation report
-banata hai.
+Ye main module hai jo Aggregator, Evidence Builder, Summary Engine,
+Recommendation Engine, aur Timeline Builder — sabko combine karke
+ek complete investigation report banata hai.
 """
 
 from intelligence.aggregator import intelligence_aggregator
 from intelligence.summary import summary_engine
+from intelligence.recommendation import recommendation_engine
+from intelligence.timeline import timeline_builder
 
 
 class IntelligenceEngine:
@@ -36,12 +38,20 @@ class IntelligenceEngine:
         # Step 2: Summary banate hain
         summary = summary_engine.generate_summary(aggregated_data)
 
-        # Step 3: Final report banate hain
+        # Step 3: Recommendation banate hain
+        recommendation = recommendation_engine.generate_recommendation(aggregated_data)
+
+        # Step 4: Timeline banate hain
+        timeline = timeline_builder.build_timeline(csv_path, wallet_address, chain)
+
+        # Step 5: Final report banate hain
         return {
             "wallet": wallet_address,
             "chain": chain,
             "wallet_summary": aggregated_data,
             "summary": summary,
+            "recommendation": recommendation,
+            "timeline": timeline,
         }
 
 

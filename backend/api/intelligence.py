@@ -6,6 +6,7 @@ karne ka endpoint handle karta hai.
 """
 
 import os
+import math
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
@@ -25,6 +26,29 @@ class IntelligenceReportRequest(BaseModel):
     wallet: str
     csv_path: str
     chain: str = "ethereum"
+
+
+def sanitize_for_json(data):
+    """
+    Kisi bhi dictionary/list mein chhupi hui NaN ya Infinity values ko
+    None se replace karta hai, taake JSON serialization crash na ho.
+
+    Args:
+        data: Dictionary, list, ya koi bhi value
+
+    Returns:
+        Wahi structure, lekin NaN/Infinity values None ban chuki hongi
+    """
+    if isinstance(data, dict):
+        return {key: sanitize_for_json(value) for key, value in data.items()}
+    elif isinstance(data, list):
+        return [sanitize_for_json(item) for item in data]
+    elif isinstance(data, float):
+        if math.isnan(data) or math.isinf(data):
+            return None
+        return data
+    else:
+        return data
 
 
 @router.post("/intelligence/report")
@@ -52,4 +76,5 @@ def generate_intelligence_report(request: IntelligenceReportRequest):
         current_graph.graph, request.csv_path, request.wallet, request.chain
     )
 
-    return report
+    # Poori report ko NaN-safe banate hain, taake JSON response kabhi crash na ho
+    return sanitize_for_json(report)
