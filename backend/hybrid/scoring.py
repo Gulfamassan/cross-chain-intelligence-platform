@@ -110,15 +110,21 @@ class HybridScorer:
             "common_neighbors_count": len(common),
         }
 
-    def get_risk_score(self) -> float:
+    def get_risk_score(self, csv_path: str, wallet_address: str, chain: str) -> float:
         """
-        Risk score deta hai — abhi Risk Engine nahi bana, isliye
-        neutral placeholder return karta hai.
+        Risk Engine se asli risk score nikalta hai.
+
+        Args:
+           csv_path (str): Wallet transactions CSV ka path
+           wallet_address (str): Wallet address
+           chain (str): Blockchain ka naam
 
         Returns:
-            float: Default/placeholder risk score
+            float: Risk score (0-100)
         """
-        return self.DEFAULT_RISK_SCORE
+        from risk.risk_engine import risk_engine
+        result = risk_engine.analyze(csv_path, wallet_address, chain)
+        return result["risk_score"]
 
 
 # Ek single instance banate hain jo poore project mein import hoga

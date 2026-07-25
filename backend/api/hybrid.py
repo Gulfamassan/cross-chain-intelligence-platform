@@ -70,8 +70,8 @@ def analyze_hybrid_attribution(request: HybridAnalyzeRequest):
         current_graph.graph, request.wallet_1, request.wallet_2
     )
 
-    # Step 4: Risk score (abhi placeholder)
-    risk_score = hybrid_scorer.get_risk_score()
+    # Step 4: Risk score (ab asli Risk Engine se)
+    risk_score = hybrid_scorer.get_risk_score(request.wallet_2_csv, request.wallet_2, request.chain)
 
     # Step 5: Fusion Engine se sab kuch combine karte hain
     fusion_result = fusion_engine.combine_scores(

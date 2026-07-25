@@ -11,6 +11,7 @@ from analytics.relationship_engine import relationship_engine
 from analytics.clustering import cluster_analyzer
 from analytics.centrality import centrality_analyzer
 from ai.node2vec_model import node2vec_trainer
+from risk.risk_engine import risk_engine
 
 
 class IntelligenceAggregator:
@@ -31,7 +32,7 @@ class IntelligenceAggregator:
 
         Returns:
             dict: Combined data — transactions, graph connections,
-                  cluster, centrality, AI embedding info, risk score (placeholder)
+                  cluster, centrality, AI embedding info, aur asli risk score
         """
         wallet = wallet_address.lower()
 
@@ -58,9 +59,10 @@ class IntelligenceAggregator:
         has_ai_embedding = wallet in embeddings
         embedding_dimension = len(embeddings[wallet]) if has_ai_embedding else 0
 
-        # Risk Engine abhi implement nahi hua — placeholder rakha hai,
-        # jab Risk Engine banega, isay yahan connect kar denge
-        risk_score = None
+        # Ab asli Risk Engine se score nikalte hain
+        risk_result = risk_engine.analyze(csv_path, wallet_address, chain)
+        risk_score = risk_result["risk_score"]
+        risk_level = risk_result["risk_level"]
 
         return {
             "wallet": wallet_address,
@@ -72,6 +74,7 @@ class IntelligenceAggregator:
             "has_ai_embedding": has_ai_embedding,
             "embedding_dimension": embedding_dimension,
             "risk_score": risk_score,
+            "risk_level": risk_level,
             "total_sent_eth": profile_data.get("total_sent_eth", 0),
             "total_received_eth": profile_data.get("total_received_eth", 0),
             "unique_contacts": profile_data.get("total_unique_contacts", 0),
