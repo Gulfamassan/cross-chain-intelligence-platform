@@ -1,9 +1,9 @@
 """
 Evidence Builder
 
-Ye module wallet ke liye "evidence points" banata hai — matlab
-concrete proof jo investigator ko dikhaya ja sake, jaise bridge
-detection, timing correlation, waghera.
+Ye module attribution ke liye "evidence points" banata hai — matlab
+concrete proof jo investigator ko dikhaya ja sake, taake wo samajh
+sake final confidence score kyun aaya.
 """
 
 from attribution.bridge_detector import bridge_detector
@@ -15,47 +15,78 @@ class EvidenceBuilder:
     Ye class raw data se readable "evidence" entries banati hai.
     """
 
-    def build_bridge_evidence(self, transactions: list, chain: str, related_wallet: str = None,
-                                time_difference_seconds: int = None, combined_score: float = None) -> list:
+    def build_attribution_evidence(
+        self,
+        bridge_detected: bool = False,
+        bridge_name: str = None,
+        amount_match: bool = False,
+        timing_match: bool = False,
+        rule_score: float = 0,
+        embedding_score: float = 0,
+        relationship_score: float = 0,
+        common_neighbors_count: int = 0,
+        final_confidence: float = 0,
+    ) -> list:
         """
-        Bridge activity se evidence entries banata hai.
+        Do wallets ke attribution ke liye evidence chain banata hai —
+        step by step, jaisa investigator dekhna chahta hai.
 
         Args:
-            transactions (list): Wallet ki transactions
-            chain (str): Blockchain ka naam
-            related_wallet (str): Agar kisi doosri wallet se link mila ho
-            time_difference_seconds (int): Bridge aur receive ke beech time farq
-            combined_score (float): Attribution ka combined score (confidence ke liye)
+            bridge_detected (bool): Kya bridge activity mili
+            bridge_name (str): Konsa bridge use hua
+            amount_match (bool): Kya transaction amount match karta hai
+            timing_match (bool): Kya timing match karti hai
+            rule_score (float): Rule-based score
+            embedding_score (float): AI embedding score
+            relationship_score (float): Graph relationship score
+            common_neighbors_count (int): Kitne common neighbors hain
+            final_confidence (float): Final combined confidence score
 
         Returns:
-            list: Evidence entries ki list
+            list: Evidence chain, har entry ek step hai
         """
-        bridge_txs = bridge_detector.detect_bridge_transactions(transactions, chain)
+        evidence_chain = []
 
-        evidence_list = []
+        if bridge_detected:
+            label = f"Bridge detected ({bridge_name})" if bridge_name else "Bridge detected"
+            evidence_chain.append({"step": "Bridge Detection", "finding": label})
 
-        for index, tx in enumerate(bridge_txs, start=1):
-            evidence = {
-                "evidence_id": f"Evidence #{index}",
-                "type": "Bridge Detected",
-                "chain": chain,
-                "bridge_name": tx.get("bridge_name"),
-                "tx_hash": tx.get("tx_hash"),
-            }
+        if amount_match:
+            evidence_chain.append({"step": "Amount Analysis", "finding": "Same/similar transaction amount"})
 
-            if related_wallet:
-                evidence["related_wallet"] = related_wallet
+        if timing_match:
+            evidence_chain.append({"step": "Timing Analysis", "finding": "Same/similar transaction timing"})
 
-            if time_difference_seconds is not None:
-                evidence["time_difference_seconds"] = time_difference_seconds
+        if embedding_score >= 70:
+            evidence_chain.append({
+                "step": "Graph Similarity",
+                "finding": f"High graph similarity (embedding score: {embedding_score})"
+            })
+        elif embedding_score >= 40:
+            evidence_chain.append({
+                "step": "Graph Similarity",
+                "finding": f"Moderate graph similarity (embedding score: {embedding_score})"
+            })
 
-            if combined_score is not None:
-                confidence_label = confidence_calculator.get_confidence_label(combined_score)
-                evidence["confidence"] = confidence_label
+        if common_neighbors_count > 0:
+            evidence_chain.append({
+                "step": "Network Overlap",
+                "finding": f"{common_neighbors_count} common neighbors found"
+            })
 
-            evidence_list.append(evidence)
+        if rule_score >= 70:
+            evidence_chain.append({
+                "step": "Rule-Based Signals",
+                "finding": f"Strong rule-based evidence (score: {rule_score})"
+            })
 
-        return evidence_list
+        confidence_label = confidence_calculator.get_confidence_label(final_confidence)
+        evidence_chain.append({
+            "step": "Final Confidence",
+            "finding": f"{final_confidence}% ({confidence_label} confidence)"
+        })
+
+        return evidence_chain
 
     def build_relationship_evidence(self, direct_connections: int, cluster: str) -> dict:
         """

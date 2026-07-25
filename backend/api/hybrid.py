@@ -2,7 +2,8 @@
 Hybrid Attribution API Routes
 
 Ye module Rule-Based aur AI-Based (Node2Vec) attribution ko combine
-karke ek final hybrid confidence score aur explanation deta hai.
+karke ek final hybrid confidence score, explanation, aur evidence
+chain deta hai.
 """
 
 import os
@@ -14,6 +15,7 @@ from hybrid.scoring import hybrid_scorer
 from hybrid.fusion import fusion_engine
 from hybrid.confidence import hybrid_confidence_classifier
 from hybrid.evaluator import explanation_engine
+from intelligence.evidence import evidence_builder
 from utils.validators import is_valid_ethereum_address
 
 # Router banate hain jo main.py mein include hoga
@@ -36,13 +38,14 @@ class HybridAnalyzeRequest(BaseModel):
 def analyze_hybrid_attribution(request: HybridAnalyzeRequest):
     """
     Do wallets ko Rule-Based aur AI-Based signals combine karke
-    analyze karta hai, aur ek explainable final confidence deta hai.
+    analyze karta hai, aur ek explainable final confidence,
+    explanation, aur evidence chain deta hai.
 
     Args:
         request (HybridAnalyzeRequest): Dono wallets, CSV paths, chain
 
     Returns:
-        dict: Har score, final confidence, classification, aur explanation
+        dict: Har score, final confidence, classification, explanation, evidence
 
     Raises:
         HTTPException: Agar address invalid ho (400) ya CSV na mile (404)
@@ -91,6 +94,19 @@ def analyze_hybrid_attribution(request: HybridAnalyzeRequest):
         common_neighbors_count=relationship_result["common_neighbors_count"],
     )
 
+    # Step 8: Evidence chain banate hain (step-by-step reasoning)
+    evidence_chain = evidence_builder.build_attribution_evidence(
+        bridge_detected=rule_result["bridge_detected"],
+        bridge_name=rule_result["bridge_name"],
+        amount_match=rule_result["rule_score"] >= 70,
+        timing_match=rule_result["bridge_detected"],
+        rule_score=rule_result["rule_score"],
+        embedding_score=embedding_score,
+        relationship_score=relationship_result["relationship_score"],
+        common_neighbors_count=relationship_result["common_neighbors_count"],
+        final_confidence=fusion_result["final_confidence"],
+    )
+
     return {
         "wallet_1": request.wallet_1,
         "wallet_2": request.wallet_2,
@@ -101,4 +117,5 @@ def analyze_hybrid_attribution(request: HybridAnalyzeRequest):
         "confidence": fusion_result["final_confidence"],
         "classification": classification,
         "explanation": explanation,
+        "evidence": evidence_chain,
     }
