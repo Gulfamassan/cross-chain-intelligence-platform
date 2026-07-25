@@ -1,0 +1,129 @@
+.dashboard {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #1a1a1a;
+}
+
+.dashboard h1 {
+  font-size: 28px;
+  margin-bottom: 20px;
+}
+
+.input-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.input-panel input {
+  flex: 1;
+  min-width: 200px;
+  padding: 10px 12px;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.input-panel button {
+  padding: 10px 20px;
+  background-color: #2e5395;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.input-panel button:disabled {
+  background-color: #9aa8c2;
+  cursor: not-allowed;
+}
+
+.error {
+  color: #c0392b;
+  background-color: #fdecea;
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+}
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  background-color: #ffffff;
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  padding: 18px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.card.wide {
+  grid-column: 1 / -1;
+}
+
+.card h2 {
+  font-size: 16px;
+  margin-bottom: 10px;
+  color: #2e5395;
+}
+
+.card p {
+  font-size: 14px;
+  margin: 4px 0;
+  line-height: 1.5;
+}
+
+.card ul {
+  margin-top: 8px;
+  padding-left: 18px;
+}
+
+.card li {
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.priority {
+  font-weight: 700;
+  font-size: 15px;
+  color: #b8860b;
+}
+
+.timeline-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.timeline-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 13px;
+}
+
+.timeline-date {
+  color: #666;
+  flex: 1;
+}
+
+.timeline-type {
+  font-weight: 600;
+  flex: 1;
+  text-align: center;
+}
+
+.timeline-value {
+  flex: 1;
+  text-align: right;
+  color: #2e5395;
+}

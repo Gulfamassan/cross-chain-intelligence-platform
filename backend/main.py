@@ -1,4 +1,6 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
 from api.network import router as network_router
 from api.wallet import router as wallet_router
 from api.transactions import router as transactions_router
@@ -15,6 +17,15 @@ from api.neo4j_routes import router as neo4j_router
 app = FastAPI(
     title="Cross Chain Intelligence Platform",
     version="1.0.0"
+)
+
+# CORS enable karte hain taake React frontend (localhost:5173) backend ko call kar sake
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Routers ko app mein include karte hain
