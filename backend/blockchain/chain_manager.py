@@ -10,7 +10,7 @@ bas naya collector banao aur yahan register kar do.
 """
 
 from blockchain.collectors.ethereum_collector import EthereumCollector
-
+from blockchain.polygon.polygon_collector import PolygonCollector
 
 class ChainManager:
     """
@@ -20,12 +20,12 @@ class ChainManager:
     def __init__(self):
         """
         Saare available collectors ko yahan register karte hain.
-        Jaise-jaise naye collectors banenge (Polygon, BNB, etc.),
+        Jaise-jaise naye collectors banenge ( BNB, Tron, etc.),
         unhe is dictionary mein add karte jayenge.
         """
         self.collectors = {
             "ethereum": EthereumCollector(),
-            # "polygon": PolygonCollector(),      -> future mein add hoga
+            "polygon": PolygonCollector(), 
             # "bnb": BNBCollector(),               -> future mein add hoga
             # "tron": TronCollector(),             -> future mein add hoga
             # "arbitrum": ArbitrumCollector(),     -> future mein add hoga
