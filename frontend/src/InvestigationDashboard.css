@@ -127,3 +127,46 @@
   text-align: right;
   color: #2e5395;
 }
+.chains-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.chain-card {
+  padding: 14px;
+  border-radius: 8px;
+  text-align: center;
+  border: 1px solid #e0e0e0;
+}
+
+.chain-card.active {
+  background-color: #eaf1ff;
+  border-color: #2e5395;
+}
+
+.chain-card.inactive {
+  background-color: #f5f5f5;
+  color: #999;
+}
+
+.chain-name {
+  display: block;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.chain-status {
+  display: block;
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.input-panel select {
+  padding: 10px 12px;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  font-size: 14px;
+  min-width: 160px;
+}

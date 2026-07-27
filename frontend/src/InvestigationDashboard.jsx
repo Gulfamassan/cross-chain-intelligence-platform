@@ -3,6 +3,13 @@ import "./InvestigationDashboard.css";
 
 const API_BASE = "http://127.0.0.1:8000";
 
+const SUPPORTED_CHAINS = [
+  { id: "ethereum", name: "Ethereum", active: true },
+  { id: "polygon", name: "Polygon", active: true },
+  { id: "arbitrum", name: "Arbitrum", active: true },
+  { id: "bnb", name: "BNB Chain", active: false },
+];
+
 function InvestigationDashboard() {
   const [wallet, setWallet] = useState("");
   const [csvPath, setCsvPath] = useState("");
@@ -17,14 +24,12 @@ function InvestigationDashboard() {
     setReport(null);
 
     try {
-      // Step 1: Pehle graph build karte hain
       await fetch(`${API_BASE}/build-graph`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ csv_path: csvPath }),
       });
 
-      // Step 2: Intelligence report mangwate hain (summary, timeline, recommendation sab isi mein hain)
       const response = await fetch(`${API_BASE}/intelligence/report`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -46,7 +51,17 @@ function InvestigationDashboard() {
 
   return (
     <div className="dashboard">
-      <h1>Investigation Dashboard</h1>
+      <h1>Multi-Chain Investigation Dashboard</h1>
+
+      {/* Supported Chains Cards */}
+      <div className="chains-grid">
+        {SUPPORTED_CHAINS.map((c) => (
+          <div key={c.id} className={`chain-card ${c.active ? "active" : "inactive"}`}>
+            <span className="chain-name">{c.name}</span>
+            <span className="chain-status">{c.active ? "Active" : "Coming Soon"}</span>
+          </div>
+        ))}
+      </div>
 
       <div className="input-panel">
         <input
@@ -61,12 +76,19 @@ function InvestigationDashboard() {
           value={csvPath}
           onChange={(e) => setCsvPath(e.target.value)}
         />
-        <input
-          type="text"
-          placeholder="Chain"
-          value={chain}
-          onChange={(e) => setChain(e.target.value)}
-        />
+
+        {/* Chain Dropdown */}
+        <select value={chain} onChange={(e) => setChain(e.target.value)}>
+          <option value="" disabled>
+            Select Blockchain
+          </option>
+          {SUPPORTED_CHAINS.filter((c) => c.active).map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+
         <button onClick={runInvestigation} disabled={loading}>
           {loading ? "Analyzing..." : "Analyze"}
         </button>
@@ -76,33 +98,30 @@ function InvestigationDashboard() {
 
       {report && (
         <div className="cards-grid">
-          {/* Wallet Summary Card */}
           <div className="card">
             <h2>Wallet Summary</h2>
+            <p>Chain: {report.wallet_summary.chain}</p>
             <p>Transactions: {report.wallet_summary.transactions}</p>
             <p>Connections: {report.wallet_summary.graph_connections}</p>
             <p>Cluster: {report.wallet_summary.cluster || "N/A"}</p>
             <p>Centrality: {report.wallet_summary.centrality_score}</p>
           </div>
 
-          {/* Risk Card */}
           <div className="card">
             <h2>Risk</h2>
             <p>
               {report.wallet_summary.risk_score !== null
-                ? `${report.wallet_summary.risk_score}/100`
-                : "Not yet calculated (Risk Engine pending)"}
+                ? `${report.wallet_summary.risk_score}/100 (${report.wallet_summary.risk_level})`
+                : "Not yet calculated"}
             </p>
           </div>
 
-          {/* AI Similarity Card */}
           <div className="card">
             <h2>AI Similarity</h2>
             <p>Embedding Available: {report.wallet_summary.has_ai_embedding ? "Yes" : "No"}</p>
             <p>Dimension: {report.wallet_summary.embedding_dimension}</p>
           </div>
 
-          {/* Recommendation Card */}
           <div className="card">
             <h2>Recommendation</h2>
             <p className="priority">{report.recommendation.priority}</p>
@@ -113,13 +132,11 @@ function InvestigationDashboard() {
             </ul>
           </div>
 
-          {/* Summary Card */}
           <div className="card wide">
             <h2>Summary</h2>
             <p>{report.summary.text_summary}</p>
           </div>
 
-          {/* Timeline Card */}
           <div className="card wide">
             <h2>Timeline</h2>
             <div className="timeline-list">
