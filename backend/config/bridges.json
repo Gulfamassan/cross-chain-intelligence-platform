@@ -6,9 +6,6 @@
     "arbitrum_bridge": [
       "0x8315177aB297bA92A06054cE80a67Ed4DBd7ed3"
     ],
-    "optimism_bridge": [
-      "0x99C9fc46f92E8a1c0deC1b1747d010903E884bE1"
-    ],
     "hop_protocol": [
       "0xb8901acB165ed027E32754E0FFe830802919727"
     ],
@@ -23,12 +20,33 @@
     ],
     "wormhole": [
       "0x3ee18B2214AFF97000D974cf647E7C347E8fa585"
+    ]
+  },
+  "polygon": {
+    "polygon_pos_bridge": [
+      "0xA0c68C638235ee32657e8f720a23ceC1bFc77C77"
     ],
-    "celer": [
-      "0x5427FEFA711Eff984124bFBB1AB6fbf5E3DA1820"
+    "hop_protocol": [
+      "0x553bC791D746767166fA3888432038193cEED5E"
     ],
-    "multichain": [
-      "0x6b7a87899490EcE95443e979cA9485CBE1A8A32"
+    "stargate": [
+      "0x45A01E4e04F14f7A4a6702c74187c5F6222033cd"
+    ]
+  },
+  "arbitrum": {
+    "arbitrum_bridge": [
+      "0x8315177aB297bA92A06054cE80a67Ed4DBd7ed3"
+    ],
+    "hop_protocol": [
+      "0x33ceb27b39d2Bb7D2e61F7564d3Df29344020417"
+    ],
+    "stargate": [
+      "0x53Bf833A5d6c4ddA888F69c22C88C9f356a41614"
+    ]
+  },
+  "bnb": {
+    "stargate": [
+      "0x4a364f8c717cAAD9A442737Eb7b8A55cc6cf18D8"
     ]
   }
 }
