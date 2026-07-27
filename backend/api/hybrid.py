@@ -3,7 +3,8 @@ Hybrid Attribution API Routes
 
 Ye module Rule-Based aur AI-Based (Node2Vec) attribution ko combine
 karke ek final hybrid confidence score, explanation, aur evidence
-chain deta hai.
+chain deta hai. Ab dono wallets alag-alag chains pe ho sakte hain
+(asal cross-chain attribution testing ke liye).
 """
 
 import os
@@ -25,13 +26,15 @@ router = APIRouter()
 class HybridAnalyzeRequest(BaseModel):
     """
     Ye schema define karta hai ke POST request mein
-    kaisa data aana chahiye.
+    kaisa data aana chahiye. Ab dono wallets ki chain
+    alag-alag specify ki ja sakti hai.
     """
     wallet_1: str
     wallet_2: str
     wallet_1_csv: str
     wallet_2_csv: str
-    chain: str = "ethereum"
+    wallet_1_chain: str = "ethereum"
+    wallet_2_chain: str = "ethereum"
 
 
 @router.post("/hybrid/analyze")
@@ -42,7 +45,7 @@ def analyze_hybrid_attribution(request: HybridAnalyzeRequest):
     explanation, aur evidence chain deta hai.
 
     Args:
-        request (HybridAnalyzeRequest): Dono wallets, CSV paths, chain
+        request (HybridAnalyzeRequest): Dono wallets, CSV paths, aur unki chains
 
     Returns:
         dict: Har score, final confidence, classification, explanation, evidence
@@ -56,22 +59,30 @@ def analyze_hybrid_attribution(request: HybridAnalyzeRequest):
     if not os.path.exists(request.wallet_1_csv) or not os.path.exists(request.wallet_2_csv):
         raise HTTPException(status_code=404, detail="Transaction CSV file(s) not found")
 
-    # Step 1: Rule-based score nikalte hain
+    # Kya ye ek asal cross-chain pair hai (dono wallets alag chains pe)
+    cross_chain_pair = request.wallet_1_chain.lower() != request.wallet_2_chain.lower()
+
+    # Step 1: Rule-based score nikalte hain (bridge detection wallet_2 ke chain pe hota hai)
     rule_result = hybrid_scorer.calculate_rule_score(
         request.wallet_1_csv, request.wallet_2_csv,
-        request.wallet_1, request.wallet_2, request.chain
+        request.wallet_1, request.wallet_2, request.wallet_2_chain
     )
 
     # Step 2: AI embedding score nikalte hain
     embedding_score = hybrid_scorer.calculate_embedding_score(request.wallet_1, request.wallet_2)
 
     # Step 3: Relationship score nikalte hain (agar graph bana ho)
+    # Note: Agar dono wallets alag chains pe hain, current graph (single-chain)
+    # mein dono ka milna mushkil hai, isliye score 0 aa sakta hai — ye
+    # ek known limitation hai, bug nahi.
     relationship_result = hybrid_scorer.calculate_relationship_score(
         current_graph.graph, request.wallet_1, request.wallet_2
     )
 
-    # Step 4: Risk score (ab asli Risk Engine se)
-    risk_score = hybrid_scorer.get_risk_score(request.wallet_2_csv, request.wallet_2, request.chain)
+    # Step 4: Risk score (wallet_2 ke chain pe, asli Risk Engine se)
+    risk_score = hybrid_scorer.get_risk_score(
+        request.wallet_2_csv, request.wallet_2, request.wallet_2_chain
+    )
 
     # Step 5: Fusion Engine se sab kuch combine karte hain
     fusion_result = fusion_engine.combine_scores(
@@ -109,10 +120,17 @@ def analyze_hybrid_attribution(request: HybridAnalyzeRequest):
 
     return {
         "wallet_1": request.wallet_1,
+        "wallet_1_chain": request.wallet_1_chain,
         "wallet_2": request.wallet_2,
+        "wallet_2_chain": request.wallet_2_chain,
+        "cross_chain_pair": cross_chain_pair,
         "rule_score": rule_result["rule_score"],
         "embedding_score": embedding_score,
         "relationship_score": relationship_result["relationship_score"],
+        "relationship_note": (
+            "Cross-chain graph analysis not yet available — relationship score reflects single-chain graph only"
+            if cross_chain_pair else None
+        ),
         "risk_score": risk_score,
         "confidence": fusion_result["final_confidence"],
         "classification": classification,
