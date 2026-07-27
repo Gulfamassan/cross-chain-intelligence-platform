@@ -11,6 +11,7 @@ bas naya collector banao aur yahan register kar do.
 
 from blockchain.collectors.ethereum_collector import EthereumCollector
 from blockchain.polygon.polygon_collector import PolygonCollector
+from blockchain.arbitrum.arbitrum_collector import ArbitrumCollector
 
 class ChainManager:
     """
@@ -28,7 +29,7 @@ class ChainManager:
             "polygon": PolygonCollector(), 
             # "bnb": BNBCollector(),               -> future mein add hoga
             # "tron": TronCollector(),             -> future mein add hoga
-            # "arbitrum": ArbitrumCollector(),     -> future mein add hoga
+            "arbitrum": ArbitrumCollector(),
             # "optimism": OptimismCollector(),     -> future mein add hoga
             # "avalanche": AvalancheCollector(),   -> future mein add hoga
         }
