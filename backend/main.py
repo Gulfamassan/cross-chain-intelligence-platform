@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from api.network import router as network_router
 from api.wallet import router as wallet_router
@@ -30,6 +31,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+import os
+os.makedirs("static_graphs", exist_ok=True)
+app.mount("/static_graphs", StaticFiles(directory="static_graphs"), name="static_graphs")
 
 # Routers ko app mein include karte hain
 app.include_router(network_router)

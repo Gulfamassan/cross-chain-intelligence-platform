@@ -83,7 +83,7 @@ def visualize_graph():
     Currently built graph ka interactive HTML visualization banata hai.
 
     Returns:
-        dict: Saved HTML file ka path
+        dict: Saved HTML file ka path aur public URL
 
     Raises:
         HTTPException: Agar abhi tak koi graph build nahi hua (400)
@@ -94,9 +94,10 @@ def visualize_graph():
             detail="No graph has been built yet. Call /build-graph first."
         )
 
-    output_path = graph_visualizer.visualize(current_graph.graph, "wallet_graph.html")
+    output_path = graph_visualizer.visualize(current_graph.graph, "static_graphs/wallet_graph.html")
 
     return {
         "message": "Graph Visualization Created Successfully",
-        "html_path": output_path
+        "html_path": output_path,
+        "url": "http://127.0.0.1:8000/static_graphs/wallet_graph.html"
     }
