@@ -14,6 +14,7 @@ from api.hybrid import router as hybrid_router
 from api.evaluation import router as evaluation_router
 from api.neo4j_routes import router as neo4j_router
 from api.risk import router as risk_router
+from api.report import router as report_router
 
 app = FastAPI(
     title="Cross Chain Intelligence Platform",
@@ -43,6 +44,7 @@ app.include_router(hybrid_router)
 app.include_router(evaluation_router)
 app.include_router(neo4j_router)
 app.include_router(risk_router)
+app.include_router(report_router)
 
 
 @app.get("/")
