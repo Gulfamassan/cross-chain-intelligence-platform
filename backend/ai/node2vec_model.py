@@ -8,6 +8,7 @@ har wallet ke liye ek numeric vector (embedding) train karta hai.
 import os
 import pickle
 from node2vec import Node2Vec
+from performance.timer import performance_timer
 
 
 class Node2VecTrainer:
@@ -16,7 +17,7 @@ class Node2VecTrainer:
     """
 
     MODELS_FOLDER = "models"
-
+    @performance_timer.timed("embedding_training")
     def train(self, graph, dimensions: int = 64, walk_length: int = 30,
               num_walks: int = 200, workers: int = 2) -> dict:
         """
@@ -74,19 +75,22 @@ class Node2VecTrainer:
             pickle.dump(embeddings, f)
 
     def load_embeddings(self) -> dict:
-        """
-        Pehle se save ki hui embeddings ko load karta hai.
+        from performance.cache import simple_cache
 
-        Returns:
-            dict: {wallet_address: embedding_vector}, ya khaali dict agar file na ho
-        """
+        cached = simple_cache.get("wallet_embeddings")
+        if cached is not None:
+           return cached
+
         embeddings_path = os.path.join(self.MODELS_FOLDER, "wallet_embeddings.pkl")
 
         if not os.path.exists(embeddings_path):
             return {}
 
         with open(embeddings_path, "rb") as f:
-            return pickle.load(f)
+            embeddings = pickle.load(f)
+
+        simple_cache.set("wallet_embeddings", embeddings, ttl_seconds=120)
+        return embeddings
 
 
 # Ek single instance banate hain jo poore project mein import hoga

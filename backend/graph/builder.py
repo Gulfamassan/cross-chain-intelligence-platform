@@ -7,6 +7,7 @@ jisme har wallet ek node hai aur har transaction ek edge hai.
 
 import networkx as nx
 import pandas as pd
+from performance.timer import performance_timer
 
 
 class TransactionGraph:
@@ -37,13 +38,8 @@ class TransactionGraph:
         """
         self.load_csv(file_path)
 
+    @performance_timer.timed("graph_build")
     def build_graph(self):
-        """
-        Loaded data se graph banata hai — nodes aur edges add karta hai.
-
-        Raises:
-            ValueError: Agar CSV pehle load nahi hui
-        """
         if self.data is None:
             raise ValueError("Pehle load_csv() call karo, phir build_graph() call karo")
 

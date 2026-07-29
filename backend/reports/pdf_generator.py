@@ -18,6 +18,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reports.report_builder import report_builder
 from reports.charts import report_charts
 from reports.templates import report_templates
+from performance.timer import performance_timer
 
 
 class PDFGenerator:
@@ -31,6 +32,7 @@ class PDFGenerator:
         os.makedirs(self.REPORTS_FOLDER, exist_ok=True)
         self.styles = getSampleStyleSheet()
 
+    @performance_timer.timed("report_generation")
     def generate_pdf_report(self, graph, csv_path: str, wallet_address: str, chain: str) -> str:
         """
         Diye gaye wallet ki poori investigation report ek PDF file mein banata hai.
