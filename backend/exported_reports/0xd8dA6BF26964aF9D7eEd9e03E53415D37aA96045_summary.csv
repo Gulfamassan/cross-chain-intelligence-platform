@@ -1,2 +1,2 @@
 wallet,chain,transactions,graph_connections,cluster,centrality_score,has_ai_embedding,embedding_dimension,risk_score,risk_level,total_sent_eth,total_received_eth,unique_contacts,active_days
-0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045,ethereum,50,0,,0.0,True,64,20,Low,0.044,0.011128,19,7
+0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045,ethereum,25,17,Cluster-1,1.0,True,64,20,Low,0.05,0.000534,17,7

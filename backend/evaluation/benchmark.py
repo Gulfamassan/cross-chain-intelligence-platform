@@ -61,7 +61,7 @@ class BenchmarkEngine:
         )
         embedding_score_100 = hybrid_scorer.calculate_embedding_score(wallet_1, wallet_2)
         relationship_result = hybrid_scorer.calculate_relationship_score(graph, wallet_1, wallet_2)
-        risk_score = hybrid_scorer.get_risk_score()
+        risk_score = hybrid_scorer.get_risk_score(wallet_2_csv, wallet_2, chain)
 
         fusion_result = fusion_engine.combine_scores(
             rule_score=rule_result["rule_score"],
