@@ -1,8 +1,8 @@
 """
 Performance API Routes
 
-Ye module system ki performance metrics (response times, cache
-stats) dikhane ka endpoint handle karta hai.
+Handles displaying system performance metrics (response times,
+cache stats).
 """
 
 from fastapi import APIRouter
@@ -11,15 +11,14 @@ from performance.timer import performance_timer
 from performance.cache import simple_cache
 from performance.neo4j_indexes import neo4j_index_manager
 
-# Router banate hain jo main.py mein include hoga
 router = APIRouter()
 
 
 @router.get("/performance/stats")
 def get_performance_stats():
     """
-    System ki performance statistics deta hai — average times
-    har major operation ke liye, aur cache stats.
+    Returns the system's performance statistics — average times for
+    each major operation, and cache stats.
 
     Returns:
         dict: Performance metrics
@@ -33,7 +32,7 @@ def get_performance_stats():
 @router.post("/performance/setup-indexes")
 def setup_neo4j_indexes():
     """
-    Neo4j database par performance indexes create karta hai.
+    Creates performance indexes on the Neo4j database.
 
     Returns:
         dict: Confirmation message

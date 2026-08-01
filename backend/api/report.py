@@ -1,8 +1,7 @@
 """
 Report API Routes
 
-Ye module wallet ki PDF investigation report generate karne
-ka endpoint handle karta hai.
+Handles generating a wallet's PDF investigation report.
 """
 
 import os
@@ -14,14 +13,12 @@ from api.graph import current_graph
 from reports.pdf_generator import pdf_generator
 from utils.validators import is_valid_ethereum_address
 
-# Router banate hain jo main.py mein include hoga
 router = APIRouter()
 
 
 class ReportGenerateRequest(BaseModel):
     """
-    Ye schema define karta hai ke POST request mein
-    kaisa data aana chahiye.
+    Defines the expected request body for the POST endpoint.
     """
     wallet: str
     csv_path: str
@@ -31,16 +28,16 @@ class ReportGenerateRequest(BaseModel):
 @router.post("/report/generate")
 def generate_report(request: ReportGenerateRequest):
     """
-    Diye gaye wallet ki PDF investigation report generate karta hai.
+    Generates a PDF investigation report for the given wallet.
 
     Args:
         request (ReportGenerateRequest): Wallet, CSV path, chain
 
     Returns:
-        FileResponse: Generated PDF file (download hoga)
+        FileResponse: The generated PDF file (downloadable)
 
     Raises:
-        HTTPException: Agar address invalid ho (400) ya CSV na mile (404)
+        HTTPException: If the address is invalid (400) or the CSV is missing (404)
     """
     if not is_valid_ethereum_address(request.wallet):
         raise HTTPException(status_code=400, detail="Invalid wallet address")

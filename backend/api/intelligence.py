@@ -1,8 +1,7 @@
 """
 Intelligence API Routes
 
-Ye module ek wallet ki complete investigation report generate
-karne ka endpoint handle karta hai.
+Handles generating a wallet's complete investigation report.
 """
 
 import os
@@ -14,14 +13,12 @@ from api.graph import current_graph
 from intelligence.intelligence_engine import intelligence_engine
 from utils.validators import is_valid_ethereum_address
 
-# Router banate hain jo main.py mein include hoga
 router = APIRouter()
 
 
 class IntelligenceReportRequest(BaseModel):
     """
-    Ye schema define karta hai ke POST request mein
-    kaisa data aana chahiye.
+    Defines the expected request body for the POST endpoint.
     """
     wallet: str
     csv_path: str
@@ -30,14 +27,14 @@ class IntelligenceReportRequest(BaseModel):
 
 def sanitize_for_json(data):
     """
-    Kisi bhi dictionary/list mein chhupi hui NaN ya Infinity values ko
-    None se replace karta hai, taake JSON serialization crash na ho.
+    Recursively replaces any hidden NaN or Infinity values in a
+    dictionary/list with None, so that JSON serialization never crashes.
 
     Args:
-        data: Dictionary, list, ya koi bhi value
+        data: A dictionary, list, or any other value
 
     Returns:
-        Wahi structure, lekin NaN/Infinity values None ban chuki hongi
+        The same structure, with any NaN/Infinity values converted to None
     """
     if isinstance(data, dict):
         return {key: sanitize_for_json(value) for key, value in data.items()}
@@ -54,17 +51,17 @@ def sanitize_for_json(data):
 @router.post("/intelligence/report")
 def generate_intelligence_report(request: IntelligenceReportRequest):
     """
-    Diye gaye wallet ki complete investigation report banata hai —
-    graph data, features, cluster, aur summary sab ek jagah.
+    Generates a wallet's complete investigation report — graph data,
+    features, cluster, and summary, all in one response.
 
     Args:
-        request (IntelligenceReportRequest): Wallet, CSV path, aur chain
+        request (IntelligenceReportRequest): Wallet, CSV path, and chain
 
     Returns:
-        dict: Complete investigation report
+        dict: The complete investigation report
 
     Raises:
-        HTTPException: Agar address invalid ho (400) ya CSV na mile (404)
+        HTTPException: If the address is invalid (400) or the CSV is missing (404)
     """
     if not is_valid_ethereum_address(request.wallet):
         raise HTTPException(status_code=400, detail="Invalid wallet address")
@@ -76,5 +73,4 @@ def generate_intelligence_report(request: IntelligenceReportRequest):
         current_graph.graph, request.csv_path, request.wallet, request.chain
     )
 
-    # Poori report ko NaN-safe banate hain, taake JSON response kabhi crash na ho
     return sanitize_for_json(report)

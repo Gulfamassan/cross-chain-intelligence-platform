@@ -1,8 +1,8 @@
 """
 Export API Routes
 
-Ye module wallet investigation data ko PDF, CSV, ya JSON
-format mein export karne ke endpoints handle karta hai.
+Handles exporting wallet investigation data in PDF, CSV, or
+JSON format.
 """
 
 import os
@@ -15,13 +15,12 @@ from export.csv_export import csv_exporter
 from export.json_export import json_exporter
 from utils.validators import is_valid_ethereum_address
 
-# Router banate hain jo main.py mein include hoga
 router = APIRouter()
 
 
 def _validate_request(wallet: str, csv_path: str):
     """
-    Common validation jo teeno export endpoints use karte hain.
+    Shared validation used by all three export endpoints.
     """
     if not is_valid_ethereum_address(wallet):
         raise HTTPException(status_code=400, detail="Invalid wallet address")
@@ -33,12 +32,12 @@ def _validate_request(wallet: str, csv_path: str):
 @router.get("/export/pdf")
 def export_pdf(wallet: str, csv_path: str, chain: str = "ethereum"):
     """
-    Wallet ki investigation report PDF format mein export karta hai.
+    Exports a wallet's investigation report in PDF format.
 
     Args:
         wallet (str): Wallet address (query parameter)
-        csv_path (str): Transactions CSV ka path (query parameter)
-        chain (str): Blockchain ka naam (query parameter, default "ethereum")
+        csv_path (str): Path to the transactions CSV (query parameter)
+        chain (str): Blockchain name (query parameter, default "ethereum")
 
     Returns:
         FileResponse: PDF file
@@ -57,12 +56,12 @@ def export_pdf(wallet: str, csv_path: str, chain: str = "ethereum"):
 @router.get("/export/csv")
 def export_csv(wallet: str, csv_path: str, chain: str = "ethereum"):
     """
-    Wallet ki summary data CSV format mein export karta hai.
+    Exports a wallet's summary data in CSV format.
 
     Args:
         wallet (str): Wallet address (query parameter)
-        csv_path (str): Transactions CSV ka path (query parameter)
-        chain (str): Blockchain ka naam (query parameter, default "ethereum")
+        csv_path (str): Path to the transactions CSV (query parameter)
+        chain (str): Blockchain name (query parameter, default "ethereum")
 
     Returns:
         FileResponse: CSV file
@@ -81,12 +80,12 @@ def export_csv(wallet: str, csv_path: str, chain: str = "ethereum"):
 @router.get("/export/json")
 def export_json(wallet: str, csv_path: str, chain: str = "ethereum"):
     """
-    Wallet ki poori report JSON format mein export karta hai.
+    Exports a wallet's complete report in JSON format.
 
     Args:
         wallet (str): Wallet address (query parameter)
-        csv_path (str): Transactions CSV ka path (query parameter)
-        chain (str): Blockchain ka naam (query parameter, default "ethereum")
+        csv_path (str): Path to the transactions CSV (query parameter)
+        chain (str): Blockchain name (query parameter, default "ethereum")
 
     Returns:
         FileResponse: JSON file

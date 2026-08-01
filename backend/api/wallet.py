@@ -1,22 +1,20 @@
 """
 Wallet API Routes
 
-Ye module wallet-related endpoints handle karta hai,
-jaise address validate karna aur balance nikalna.
+Handles wallet-related endpoints, such as validating an address
+and checking its balance.
 """
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from services.wallet_service import wallet_service
 
-# Router banate hain jo main.py mein include hoga
 router = APIRouter()
 
 
 class WalletAddress(BaseModel):
     """
-    Ye schema define karta hai ke POST request mein
-    kaisa data aana chahiye.
+    Defines the expected request body for the POST endpoint.
     """
     address: str
 
@@ -24,10 +22,10 @@ class WalletAddress(BaseModel):
 @router.post("/validate-wallet")
 def validate_wallet(wallet: WalletAddress):
     """
-    Diye gaye wallet address ko validate karta hai.
+    Validates the given wallet address.
 
     Args:
-        wallet (WalletAddress): Request body mein aane wala address
+        wallet (WalletAddress): The address provided in the request body
 
     Returns:
         dict: Validation result
@@ -38,16 +36,16 @@ def validate_wallet(wallet: WalletAddress):
 @router.get("/wallet-balance/{address}")
 def get_wallet_balance(address: str):
     """
-    Diye gaye wallet address ka balance nikalta hai.
+    Returns the balance of the given wallet address.
 
     Args:
-        address (str): URL mein aane wala wallet address
+        address (str): The wallet address provided in the URL
 
     Returns:
-        dict: Address aur uska balance
+        dict: Address and its balance
 
     Raises:
-        HTTPException: Agar address invalid ho (400 error)
+        HTTPException: If the address is invalid (400)
     """
     try:
         return wallet_service.get_balance(address)

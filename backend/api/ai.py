@@ -1,8 +1,8 @@
 """
 AI API Routes
 
-Ye module Node2Vec model training aur AI-based wallet similarity
-comparison ke endpoints handle karta hai.
+Handles Node2Vec model training and AI-based wallet similarity
+comparison endpoints.
 """
 
 from fastapi import APIRouter, HTTPException
@@ -12,20 +12,19 @@ from api.graph import current_graph
 from ai.node2vec_model import node2vec_trainer
 from ai.similarity_model import embedding_similarity
 
-# Router banate hain jo main.py mein include hoga
 router = APIRouter()
 
 
 @router.post("/ai/train")
 def train_embeddings():
     """
-    Currently built graph par Node2Vec embeddings train karta hai.
+    Trains Node2Vec embeddings on the currently built graph.
 
     Returns:
-        dict: Success message aur kitni wallets ke embeddings bane
+        dict: Success message and the number of wallets embedded
 
     Raises:
-        HTTPException: Agar abhi tak koi graph build nahi hua (400)
+        HTTPException: If no graph has been built yet (400)
     """
     if len(current_graph.get_nodes()) == 0:
         raise HTTPException(
@@ -43,8 +42,7 @@ def train_embeddings():
 
 class SimilarityRequest(BaseModel):
     """
-    Ye schema define karta hai ke POST request mein
-    kaisa data aana chahiye.
+    Defines the expected request body for the POST endpoint.
     """
     wallet_1: str
     wallet_2: str
@@ -53,17 +51,17 @@ class SimilarityRequest(BaseModel):
 @router.post("/ai/similarity")
 def compare_wallet_similarity(request: SimilarityRequest):
     """
-    Do wallets ka AI-based (embedding) similarity score deta hai.
+    Returns the AI-based (embedding) similarity score between two wallets.
 
     Args:
-        request (SimilarityRequest): Dono wallets ke addresses
+        request (SimilarityRequest): Both wallets' addresses
 
     Returns:
         dict: Similarity score
 
     Raises:
-        HTTPException: Agar embeddings abhi tak train nahi hui (400),
-                        ya koi wallet embeddings mein na mile (404)
+        HTTPException: If embeddings haven't been trained yet (400),
+                        or a wallet isn't found in the embeddings (404)
     """
     embeddings = node2vec_trainer.load_embeddings()
 

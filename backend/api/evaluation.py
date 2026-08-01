@@ -1,8 +1,8 @@
 """
 Evaluation API Routes
 
-Ye module system ki performance metrics, benchmark comparison,
-aur poori evaluation report ke endpoints handle karta hai.
+Handles system performance metrics, benchmark comparisons, and
+the complete evaluation report.
 """
 
 from fastapi import APIRouter, HTTPException
@@ -13,21 +13,20 @@ from evaluation.metrics import evaluation_metrics
 from evaluation.benchmark import benchmark_engine
 from ai.node2vec_model import node2vec_trainer
 
-# Router banate hain jo main.py mein include hoga
 router = APIRouter()
 
 
 @router.get("/evaluation/metrics")
 def get_evaluation_metrics():
     """
-    System ki basic performance metrics deta hai — wallets, edges,
-    embedding dimension, waghera.
+    Returns the system's basic performance metrics — wallets, edges,
+    embedding dimension, etc.
 
     Returns:
         dict: Metrics report
 
     Raises:
-        HTTPException: Agar abhi tak koi graph build nahi hua (400)
+        HTTPException: If no graph has been built yet (400)
     """
     if len(current_graph.get_nodes()) == 0:
         raise HTTPException(
@@ -46,9 +45,7 @@ def get_evaluation_metrics():
 
 class BenchmarkRequest(BaseModel):
     """
-    Ye schema define karta hai ke POST-jaisa data GET request
-    ke liye bhi query parameters se lena hoga — lekin hum simplicity
-    ke liye POST body bhi support karenge.
+    Defines the expected request body for the POST endpoint.
     """
     wallet_1: str
     wallet_2: str
@@ -60,17 +57,17 @@ class BenchmarkRequest(BaseModel):
 @router.post("/evaluation/benchmark")
 def get_benchmark_comparison(request: BenchmarkRequest):
     """
-    Rule-Based, Node2Vec, aur Hybrid approaches ko compare karta hai
-    ek wallet pair par.
+    Compares the Rule-Based, Node2Vec, and Hybrid approaches for a
+    given wallet pair.
 
     Args:
-        request (BenchmarkRequest): Dono wallets, CSV paths, chain
+        request (BenchmarkRequest): Both wallets, CSV paths, chain
 
     Returns:
-        dict: Teeno models ka comparison
+        dict: Comparison across all three models
 
     Raises:
-        HTTPException: Agar graph build nahi hua (400)
+        HTTPException: If no graph has been built yet (400)
     """
     if len(current_graph.get_nodes()) == 0:
         raise HTTPException(
@@ -90,14 +87,13 @@ def get_benchmark_comparison(request: BenchmarkRequest):
 @router.get("/evaluation/report")
 def get_full_evaluation_report():
     """
-    Poori evaluation report deta hai — metrics aur charts dono
-    generate karta hai.
+    Returns the complete evaluation report — both metrics and charts.
 
     Returns:
-        dict: Complete evaluation report, chart paths ke saath
+        dict: Complete evaluation report with chart paths
 
     Raises:
-        HTTPException: Agar graph build nahi hua (400)
+        HTTPException: If no graph has been built yet (400)
     """
     if len(current_graph.get_nodes()) == 0:
         raise HTTPException(

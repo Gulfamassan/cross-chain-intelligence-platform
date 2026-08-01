@@ -1,7 +1,7 @@
 """
 Risk API Routes
 
-Ye module wallet ki risk analysis ka endpoint handle karta hai.
+Handles the wallet risk analysis endpoint.
 """
 
 import os
@@ -11,14 +11,12 @@ from pydantic import BaseModel
 from risk.risk_engine import risk_engine
 from utils.validators import is_valid_ethereum_address
 
-# Router banate hain jo main.py mein include hoga
 router = APIRouter()
 
 
 class RiskAnalyzeRequest(BaseModel):
     """
-    Ye schema define karta hai ke POST request mein
-    kaisa data aana chahiye.
+    Defines the expected request body for the POST endpoint.
     """
     wallet: str
     csv_path: str
@@ -28,16 +26,16 @@ class RiskAnalyzeRequest(BaseModel):
 @router.post("/risk/analyze")
 def analyze_risk(request: RiskAnalyzeRequest):
     """
-    Diye gaye wallet ki poori risk analysis karta hai.
+    Performs a complete risk analysis for the given wallet.
 
     Args:
         request (RiskAnalyzeRequest): Wallet, CSV path, chain
 
     Returns:
-        dict: Risk score, level, aur poora breakdown
+        dict: Risk score, level, and a full breakdown
 
     Raises:
-        HTTPException: Agar address invalid ho (400) ya CSV na mile (404)
+        HTTPException: If the address is invalid (400) or the CSV is missing (404)
     """
     if not is_valid_ethereum_address(request.wallet):
         raise HTTPException(status_code=400, detail="Invalid wallet address")

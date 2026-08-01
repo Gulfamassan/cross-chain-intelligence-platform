@@ -1,9 +1,8 @@
 """
 Neo4j API Routes
 
-Ye module Neo4j graph database ke saath interact karne ke
-endpoints handle karta hai — import, wallet lookup, neighbors,
-path finding, aur community detection.
+Handles interaction with the Neo4j graph database — import, wallet
+lookup, neighbors, path finding, and community detection.
 """
 
 from fastapi import APIRouter, HTTPException
@@ -15,14 +14,12 @@ from database.graph_repository import graph_repository
 from analytics.clustering import cluster_analyzer
 from utils.validators import is_valid_ethereum_address
 
-# Router banate hain jo main.py mein include hoga
 router = APIRouter()
 
 
 class ImportRequest(BaseModel):
     """
-    Ye schema define karta hai ke POST request mein
-    kaisa data aana chahiye.
+    Defines the expected request body for the POST endpoint.
     """
     chain: str = "ethereum"
 
@@ -30,16 +27,16 @@ class ImportRequest(BaseModel):
 @router.post("/neo4j/import")
 def import_graph_to_neo4j(request: ImportRequest):
     """
-    Currently built (NetworkX) graph ko Neo4j database mein import karta hai.
+    Imports the currently built (NetworkX) graph into the Neo4j database.
 
     Args:
-        request (ImportRequest): Blockchain ka naam
+        request (ImportRequest): Blockchain name
 
     Returns:
-        dict: Kitne nodes aur relationships import hue
+        dict: Number of nodes and relationships imported
 
     Raises:
-        HTTPException: Agar abhi tak koi graph build nahi hua (400)
+        HTTPException: If no graph has been built yet (400)
     """
     if len(current_graph.get_nodes()) == 0:
         raise HTTPException(
@@ -58,16 +55,16 @@ def import_graph_to_neo4j(request: ImportRequest):
 @router.get("/neo4j/wallet/{address}")
 def get_wallet_from_neo4j(address: str):
     """
-    Neo4j se ek wallet ki info nikalta hai.
+    Retrieves a wallet's information from Neo4j.
 
     Args:
         address (str): Wallet address
 
     Returns:
-        dict: Wallet ki details aur uske connections
+        dict: Wallet details and its connections
 
     Raises:
-        HTTPException: Agar address invalid ho (400)
+        HTTPException: If the address is invalid (400)
     """
     if not is_valid_ethereum_address(address):
         raise HTTPException(status_code=400, detail="Invalid wallet address")
@@ -84,16 +81,16 @@ def get_wallet_from_neo4j(address: str):
 @router.get("/neo4j/neighbors/{address}")
 def get_neo4j_neighbors(address: str):
     """
-    Neo4j se ek wallet ke saare direct neighbors nikalta hai.
+    Retrieves all of a wallet's direct neighbors from Neo4j.
 
     Args:
         address (str): Wallet address
 
     Returns:
-        dict: Neighbor wallets ki list
+        dict: List of neighbor wallets
 
     Raises:
-        HTTPException: Agar address invalid ho (400)
+        HTTPException: If the address is invalid (400)
     """
     if not is_valid_ethereum_address(address):
         raise HTTPException(status_code=400, detail="Invalid wallet address")
@@ -111,17 +108,17 @@ def get_neo4j_neighbors(address: str):
 @router.get("/neo4j/path")
 def get_neo4j_path(wallet_1: str, wallet_2: str):
     """
-    Neo4j se do wallets ke beech shortest path dhoondta hai.
+    Finds the shortest path between two wallets in Neo4j.
 
     Args:
-        wallet_1 (str): Pehli wallet (query parameter)
-        wallet_2 (str): Dusri wallet (query parameter)
+        wallet_1 (str): First wallet (query parameter)
+        wallet_2 (str): Second wallet (query parameter)
 
     Returns:
-        dict: Path ke wallets
+        dict: The wallets that make up the path
 
     Raises:
-        HTTPException: Agar koi address invalid ho (400)
+        HTTPException: If an address is invalid (400)
     """
     if not is_valid_ethereum_address(wallet_1) or not is_valid_ethereum_address(wallet_2):
         raise HTTPException(status_code=400, detail="Invalid wallet address")
@@ -153,14 +150,14 @@ def get_neo4j_path(wallet_1: str, wallet_2: str):
 @router.get("/neo4j/community")
 def get_neo4j_community():
     """
-    Currently built graph par community detection chalata hai
-    (Neo4j mein stored data ke corresponding).
+    Runs community detection on the currently built graph
+    (corresponding to the data stored in Neo4j).
 
     Returns:
-        dict: Saare clusters aur unke wallets
+        dict: All clusters and their wallets
 
     Raises:
-        HTTPException: Agar abhi tak koi graph build nahi hua (400)
+        HTTPException: If no graph has been built yet (400)
     """
     if len(current_graph.get_nodes()) == 0:
         raise HTTPException(

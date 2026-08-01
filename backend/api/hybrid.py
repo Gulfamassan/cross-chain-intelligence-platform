@@ -1,10 +1,10 @@
 """
 Hybrid Attribution API Routes
 
-Ye module Rule-Based aur AI-Based (Node2Vec) attribution ko combine
-karke ek final hybrid confidence score, explanation, aur evidence
-chain deta hai. Ab dono wallets alag-alag chains pe ho sakte hain
-(asal cross-chain attribution testing ke liye).
+Combines Rule-Based and AI-Based (Node2Vec) attribution into a
+final hybrid confidence score, explanation, and evidence chain.
+Supports wallets on two different chains for genuine cross-chain
+attribution testing.
 """
 
 import os
@@ -19,15 +19,13 @@ from hybrid.evaluator import explanation_engine
 from intelligence.evidence import evidence_builder
 from utils.validators import is_valid_ethereum_address
 
-# Router banate hain jo main.py mein include hoga
 router = APIRouter()
 
 
 class HybridAnalyzeRequest(BaseModel):
     """
-    Ye schema define karta hai ke POST request mein
-    kaisa data aana chahiye. Ab dono wallets ki chain
-    alag-alag specify ki ja sakti hai.
+    Defines the expected request body for the POST endpoint.
+    Each wallet can have its own chain specified.
     """
     wallet_1: str
     wallet_2: str
@@ -40,18 +38,18 @@ class HybridAnalyzeRequest(BaseModel):
 @router.post("/hybrid/analyze")
 def analyze_hybrid_attribution(request: HybridAnalyzeRequest):
     """
-    Do wallets ko Rule-Based aur AI-Based signals combine karke
-    analyze karta hai, aur ek explainable final confidence,
-    explanation, aur evidence chain deta hai.
+    Analyzes two wallets by combining Rule-Based and AI-Based signals,
+    and returns an explainable final confidence score, explanation,
+    and evidence chain.
 
     Args:
-        request (HybridAnalyzeRequest): Dono wallets, CSV paths, aur unki chains
+        request (HybridAnalyzeRequest): Both wallets, CSV paths, and their chains
 
     Returns:
-        dict: Har score, final confidence, classification, explanation, evidence
+        dict: Each score, final confidence, classification, explanation, evidence
 
     Raises:
-        HTTPException: Agar address invalid ho (400) ya CSV na mile (404)
+        HTTPException: If an address is invalid (400) or a CSV file is missing (404)
     """
     if not is_valid_ethereum_address(request.wallet_1) or not is_valid_ethereum_address(request.wallet_2):
         raise HTTPException(status_code=400, detail="Invalid wallet address")
@@ -59,32 +57,23 @@ def analyze_hybrid_attribution(request: HybridAnalyzeRequest):
     if not os.path.exists(request.wallet_1_csv) or not os.path.exists(request.wallet_2_csv):
         raise HTTPException(status_code=404, detail="Transaction CSV file(s) not found")
 
-    # Kya ye ek asal cross-chain pair hai (dono wallets alag chains pe)
     cross_chain_pair = request.wallet_1_chain.lower() != request.wallet_2_chain.lower()
 
-    # Step 1: Rule-based score nikalte hain (bridge detection wallet_2 ke chain pe hota hai)
     rule_result = hybrid_scorer.calculate_rule_score(
         request.wallet_1_csv, request.wallet_2_csv,
         request.wallet_1, request.wallet_2, request.wallet_2_chain
     )
 
-    # Step 2: AI embedding score nikalte hain
     embedding_score = hybrid_scorer.calculate_embedding_score(request.wallet_1, request.wallet_2)
 
-    # Step 3: Relationship score nikalte hain (agar graph bana ho)
-    # Note: Agar dono wallets alag chains pe hain, current graph (single-chain)
-    # mein dono ka milna mushkil hai, isliye score 0 aa sakta hai — ye
-    # ek known limitation hai, bug nahi.
     relationship_result = hybrid_scorer.calculate_relationship_score(
         current_graph.graph, request.wallet_1, request.wallet_2
     )
 
-    # Step 4: Risk score (wallet_2 ke chain pe, asli Risk Engine se)
     risk_score = hybrid_scorer.get_risk_score(
         request.wallet_2_csv, request.wallet_2, request.wallet_2_chain
     )
 
-    # Step 5: Fusion Engine se sab kuch combine karte hain
     fusion_result = fusion_engine.combine_scores(
         rule_score=rule_result["rule_score"],
         embedding_score=embedding_score,
@@ -92,10 +81,8 @@ def analyze_hybrid_attribution(request: HybridAnalyzeRequest):
         risk_score=risk_score,
     )
 
-    # Step 6: Classification label nikalte hain
     classification = hybrid_confidence_classifier.classify(fusion_result["final_confidence"])
 
-    # Step 7: Explanation banate hain
     explanation = explanation_engine.generate_explanation(
         bridge_detected=rule_result["bridge_detected"],
         bridge_name=rule_result["bridge_name"],
@@ -105,7 +92,6 @@ def analyze_hybrid_attribution(request: HybridAnalyzeRequest):
         common_neighbors_count=relationship_result["common_neighbors_count"],
     )
 
-    # Step 8: Evidence chain banate hain (step-by-step reasoning)
     evidence_chain = evidence_builder.build_attribution_evidence(
         bridge_detected=rule_result["bridge_detected"],
         bridge_name=rule_result["bridge_name"],
