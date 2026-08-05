@@ -11,6 +11,8 @@ A, B, C teeno ek hi entity group mein link ho jaate hain.
 
 from attribution.heuristics import heuristic_engine
 from attribution.similarity import similarity_engine
+from attribution.confidence import confidence_calculator
+from attribution.evidence_builder import build_evidence_list
 
 
 class EntityResolver:
@@ -59,6 +61,38 @@ class EntityResolver:
             "combined_score": round(combined_score, 2),
             "verdict": "Possible Same Entity" if is_same_entity else "Likely Different Entities",
             "is_same_entity": is_same_entity,
+        }
+
+    def get_relationship_confidence(self, wallet_a_data: dict, wallet_b_data: dict,
+                                      heuristic_inputs: dict, graph_distance: int = None) -> dict:
+        """
+        Presentation-friendly wrapper around evaluate_wallet_pair().
+        Returns UI-ready confidence percentage + evidence bullets
+        instead of just a raw verdict.
+
+        Args:
+            wallet_a_data, wallet_b_data, heuristic_inputs: same as evaluate_wallet_pair()
+            graph_distance: optional shortest-path hop count between the wallets
+                             (from analytics/path_analysis.py), if available
+
+        Returns:
+            dict with confidence_percentage, confidence_label, and evidence list
+        """
+        pair_result = self.evaluate_wallet_pair(wallet_a_data, wallet_b_data, heuristic_inputs)
+
+        similarity_result = similarity_engine.calculate_similarity_score(wallet_a_data, wallet_b_data)
+        heuristic_breakdown = heuristic_engine.calculate_total_score(**heuristic_inputs)
+
+        confidence_summary = confidence_calculator.get_confidence_summary(pair_result["combined_score"])
+        evidence = build_evidence_list(heuristic_breakdown, similarity_result, graph_distance)
+
+        return {
+            "wallet_a": pair_result["wallet_a"],
+            "wallet_b": pair_result["wallet_b"],
+            "relationship_confidence_percent": confidence_summary["confidence_percentage"],
+            "confidence_label": confidence_summary["confidence_label"],
+            "verdict": pair_result["verdict"],
+            "evidence": evidence,
         }
 
     def resolve_entity_groups(self, evaluated_pairs: list) -> list:
