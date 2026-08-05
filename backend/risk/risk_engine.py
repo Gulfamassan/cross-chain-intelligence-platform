@@ -12,6 +12,7 @@ from risk.blacklist import blacklist
 from risk.scoring import risk_scorer
 from attribution.bridge_detector import bridge_detector
 from features.extractor import feature_extractor
+from risk.risk_explainer import build_risk_explanation
 
 
 class RiskEngine:
@@ -83,7 +84,33 @@ class RiskEngine:
                 "large_transactions": large_tx_count,
             },
         }
+    def get_explainable_risk(self, csv_path: str, wallet_address: str, chain: str,
+                               ai_similarity_score: float = None,
+                               shared_neighbors_count: int = None) -> dict:
+            """
+        Wrapper around analyze() that adds a human-readable explanation
+        list alongside the numeric risk score — for the investigator UI.
 
+        Args:
+            csv_path, wallet_address, chain: same as analyze()
+            ai_similarity_score: optional Node2Vec similarity to a known
+                                  risky wallet (from ai/similarity_model.py)
+            shared_neighbors_count: optional shared-neighbor count with
+                                     flagged wallets (from analytics/relationships.py)
+
+        Returns:
+            dict: Same as analyze(), plus an "explanation" list
+        """
+            result = self.analyze(csv_path, wallet_address, chain)
+
+            result["explanation"] = build_risk_explanation(
+            result["breakdown"],
+            ai_similarity_score=ai_similarity_score,
+            shared_neighbors_count=shared_neighbors_count,
+        )
+
+            return result   
+    
     def _get_risk_level(self, score: float) -> str:
         """
         Numeric score ko readable risk level mein convert karta hai.
