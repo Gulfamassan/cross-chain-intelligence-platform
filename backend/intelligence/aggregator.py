@@ -2,8 +2,8 @@
 Intelligence Aggregator
 
 Ye module har alag engine (Features, Graph, Relationships, AI/Node2Vec,
-Risk) ka output collect karta hai aur ek single wallet ke liye
-saara data ek jagah jama karta hai.
+Risk, Entity Resolution) ka output collect karta hai aur ek single
+wallet ke liye saara data ek jagah jama karta hai.
 """
 
 from features.extractor import feature_extractor
@@ -12,6 +12,7 @@ from analytics.clustering import cluster_analyzer
 from analytics.centrality import centrality_analyzer
 from ai.node2vec_model import node2vec_trainer
 from risk.risk_engine import risk_engine
+from entity_labeling.label_engine import resolve_entity
 
 
 class IntelligenceAggregator:
@@ -32,7 +33,8 @@ class IntelligenceAggregator:
 
         Returns:
             dict: Combined data — transactions, graph connections,
-                  cluster, centrality, AI embedding info, aur asli risk score
+                  cluster, centrality, AI embedding info, risk score,
+                  aur ab entity classification bhi
         """
         wallet = wallet_address.lower()
 
@@ -59,10 +61,15 @@ class IntelligenceAggregator:
         has_ai_embedding = wallet in embeddings
         embedding_dimension = len(embeddings[wallet]) if has_ai_embedding else 0
 
-        # Ab asli Risk Engine se score nikalte hain
+        # Risk Engine se score nikalte hain
         risk_result = risk_engine.analyze(csv_path, wallet_address, chain)
         risk_score = risk_result["risk_score"]
         risk_level = risk_result["risk_level"]
+
+        # Sprint 12/13 addition: Entity Resolution — same profile_data
+        # reused, no duplicate feature extraction.
+        # NOTE: contract-bytecode detection not wired yet, defaults to False.
+        entity_result = resolve_entity(wallet_address, profile_data, is_contract=False)
 
         return {
             "wallet": wallet_address,
@@ -79,6 +86,11 @@ class IntelligenceAggregator:
             "total_received_eth": profile_data.get("total_received_eth", 0),
             "unique_contacts": profile_data.get("total_unique_contacts", 0),
             "active_days": profile_data.get("active_days", 0),
+            # New fields (Sprint 12/13):
+            "entity_label": entity_result["label"],
+            "entity_confidence": entity_result["confidence"],
+            "entity_evidence": entity_result["reasons"],
+            "entity_source": entity_result["source"],
         }
 
 

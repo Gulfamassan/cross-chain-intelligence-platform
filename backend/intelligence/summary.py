@@ -28,6 +28,11 @@ class SummaryEngine:
         risk_score = aggregated_data.get("risk_score")
 
         points = []
+        
+        # Entity classification ke baare mein (Sprint 12/13 addition)
+        entity_label = aggregated_data.get("entity_label")
+        if entity_label:
+            points.append(f"Classified as {entity_label}.")
 
         # Connections ke baare mein
         if connections > 0:

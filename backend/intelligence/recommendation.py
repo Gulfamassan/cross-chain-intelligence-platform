@@ -28,7 +28,14 @@ class RecommendationEngine:
 
         reasons = []
         priority = "Low Priority"
-
+        
+        # Entity classification (Sprint 12/13 addition)
+        entity_label = aggregated_data.get("entity_label")
+        entity_confidence = aggregated_data.get("entity_confidence", 0)
+        if entity_label and entity_label != "Unknown":
+            reasons.append(f"Entity classified as {entity_label} ({round(entity_confidence * 100)}% confidence)")
+            if entity_label == "Exchange Wallet":
+                reasons.append("Exchange wallets carry inherent KYC correlation value")
         # High connectivity ek strong signal hai
         if connections >= 10:
             reasons.append(f"High connectivity detected ({connections} direct connections)")
