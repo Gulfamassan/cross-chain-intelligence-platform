@@ -18,6 +18,7 @@ from api.risk import router as risk_router
 from api.report import router as report_router
 from api.export import router as export_router
 from api.performance import router as performance_router
+from api.entity import router as entity_router
 
 app = FastAPI(
     title="Cross Chain Intelligence Platform",
@@ -53,6 +54,7 @@ app.include_router(risk_router)
 app.include_router(report_router)
 app.include_router(export_router)
 app.include_router(performance_router)
+app.include_router(entity_router)
 
 
 
