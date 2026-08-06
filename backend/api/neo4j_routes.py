@@ -55,13 +55,15 @@ def import_graph_to_neo4j(request: ImportRequest):
 @router.get("/neo4j/wallet/{address}")
 def get_wallet_from_neo4j(address: str):
     """
-    Retrieves a wallet's information from Neo4j.
+    Retrieves a wallet's information from Neo4j — including its
+    Knowledge Graph entity classification (Wallet/Exchange/Bridge/
+    Contract/Personal labels), chain, and direct connections.
 
     Args:
         address (str): Wallet address
 
     Returns:
-        dict: Wallet details and its connections
+        dict: Wallet details (entity labels, chain), connections
 
     Raises:
         HTTPException: If the address is invalid (400)
@@ -71,8 +73,17 @@ def get_wallet_from_neo4j(address: str):
 
     connections = graph_repository.get_wallet_connections(address)
 
+    # Sprint 12/13 addition: entity-type labels + chain from the
+    # Knowledge Graph enrichment (Day 6-7 work), via the same
+    # graph_repository — no duplicate query logic.
+    details = graph_repository.get_wallet_details_with_labels(address)
+    entity_labels = [label for label in details.get("labels", []) if label != "Wallet"]
+
     return {
         "wallet": address,
+        "chain": details.get("chain"),
+        "entity_type": entity_labels[0] if entity_labels else "Unclassified",
+        "neo4j_labels": details.get("labels", []),
         "connections_count": len(connections),
         "connections": connections,
     }
