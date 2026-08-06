@@ -41,3 +41,30 @@ def lookup_known_address(address: str) -> dict | None:
         return {"label": "Smart Contract", "name": KNOWN_SMART_CONTRACTS[addr], "source": "known_list"}
 
     return None
+
+def search_known_entities(query: str) -> list:
+    """
+    Naam ke ek hisse (substring) se known entities search karta hai —
+    e.g. "Binance" -> saare Binance-labeled addresses (Hot/Deposit/Cold wallet).
+
+    Args:
+        query (str): Search term (case-insensitive)
+
+    Returns:
+        list[dict]: Matches with address, label (type), and name
+    """
+    query_lower = query.lower()
+    results = []
+
+    all_tables = [
+        (KNOWN_EXCHANGE_WALLETS, "Exchange Wallet"),
+        (KNOWN_BRIDGE_CONTRACTS, "Bridge Wallet"),
+        (KNOWN_SMART_CONTRACTS, "Smart Contract"),
+    ]
+
+    for table, label in all_tables:
+        for address, name in table.items():
+            if query_lower in name.lower():
+                results.append({"address": address, "label": label, "name": name})
+
+    return results

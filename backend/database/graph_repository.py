@@ -189,6 +189,24 @@ class GraphRepository:
             "tx_hash": tx_hash,
         })
 
+    def get_wallet_details_with_labels(self, address: str) -> dict:
+        """
+        Wallet ki Neo4j labels (entity type) aur uski chain fetch karta hai —
+        search results ko enrich karne ke liye.
+
+        Args:
+            address (str): Wallet address
+
+        Returns:
+            dict: address, chain, aur Neo4j labels (jaise ["Wallet", "Personal"])
+        """
+        query = """
+        MATCH (w:Wallet {address: $address})
+        RETURN w.address AS address, w.chain AS chain, labels(w) AS labels
+        """
+        result = neo4j_client.run_query(query, {"address": address.lower()})
+        return result[0] if result else {}
+    
     def clear_database(self):
         """
         Neo4j database se saare nodes aur relationships delete karta hai.
