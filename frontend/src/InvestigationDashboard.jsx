@@ -25,11 +25,16 @@ function InvestigationDashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Sprint 13 Day 7 additions
+  const [explanation, setExplanation] = useState(null);
+  const [explanationLoading, setExplanationLoading] = useState(false);
+
   const runInvestigation = async () => {
     setLoading(true);
     setError("");
     setReport(null);
     setGraphUrl(null);
+    setExplanation(null);
 
     try {
       await fetch(`${API_BASE}/build-graph`, {
@@ -60,6 +65,30 @@ function InvestigationDashboard() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Sprint 13 Day 7: fetch explainability breakdown for the current wallet
+  const viewExplanation = async () => {
+    setExplanationLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/entity/explain`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ wallet_address: wallet, chain }),
+      });
+      const data = await response.json();
+      setExplanation(data);
+    } catch (err) {
+      setExplanation({ explanation: "Could not load explanation." });
+    } finally {
+      setExplanationLoading(false);
+    }
+  };
+
+  // Sprint 13 Day 7: scroll to the existing Wallet Network graph section
+  const scrollToGraph = () => {
+    const graphEl = document.querySelector(".chart-box.wide");
+    if (graphEl) graphEl.scrollIntoView({ behavior: "smooth" });
   };
 
   // Timeline event counts (chart ke liye)
@@ -213,6 +242,38 @@ function InvestigationDashboard() {
 
           {/* Existing Cards */}
           <div className="cards-grid">
+
+            {/* Sprint 13 Day 7: Entity Intelligence card */}
+            <div className="card wide">
+              <h2>Entity Intelligence</h2>
+              <p><strong>Wallet Address:</strong> {report.wallet_summary.wallet}</p>
+              <p><strong>Chain:</strong> {report.wallet_summary.chain}</p>
+              <p><strong>Entity Type:</strong> {report.wallet_summary.entity_label}</p>
+              <p><strong>Confidence:</strong> {Math.round(report.wallet_summary.entity_confidence * 100)}%</p>
+              <p><strong>Evidence:</strong></p>
+              <ul>
+                {report.wallet_summary.entity_evidence.map((item, i) => (
+                  <li key={i}>{item}</li>
+                ))}
+              </ul>
+              <div className="entity-actions">
+                <button onClick={scrollToGraph}>View Graph</button>
+                <button onClick={viewExplanation} disabled={explanationLoading}>
+                  {explanationLoading ? "Loading..." : "View Explanation"}
+                </button>
+              </div>
+              {explanation && (
+                <div className="explanation-box">
+                  <p>{explanation.explanation}</p>
+                  <ul>
+                    {explanation.evidence && explanation.evidence.map((item, i) => (
+                      <li key={i}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
             <div className="card">
               <h2>Recommendation</h2>
               <p className="priority">{report.recommendation.priority}</p>

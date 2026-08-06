@@ -233,3 +233,15 @@
   border: none;
   border-radius: 6px;
 }
+.entity-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.explanation-box {
+  margin-top: 12px;
+  padding: 12px;
+  background: #f7f7f7;
+  border-radius: 6px;
+}
