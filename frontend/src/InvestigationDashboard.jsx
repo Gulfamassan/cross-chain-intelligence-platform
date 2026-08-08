@@ -29,6 +29,13 @@ function InvestigationDashboard() {
   const [explanation, setExplanation] = useState(null);
   const [explanationLoading, setExplanationLoading] = useState(false);
 
+  // Sprint 14 Day 6: Cross-chain wallet comparison
+  const [compareWallet2, setCompareWallet2] = useState("");
+  const [compareCsv2, setCompareCsv2] = useState("");
+  const [compareChain2, setCompareChain2] = useState("polygon");
+  const [compareResult, setCompareResult] = useState(null);
+  const [compareLoading, setCompareLoading] = useState(false);
+
   const runInvestigation = async () => {
     setLoading(true);
     setError("");
@@ -89,6 +96,32 @@ function InvestigationDashboard() {
   const scrollToGraph = () => {
     const graphEl = document.querySelector(".chart-box.wide");
     if (graphEl) graphEl.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // Sprint 14 Day 6: compare current wallet against a second wallet
+  const runComparison = async () => {
+    setCompareLoading(true);
+    setCompareResult(null);
+    try {
+      const response = await fetch(`${API_BASE}/hybrid/analyze`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          wallet_1: wallet,
+          wallet_2: compareWallet2,
+          wallet_1_csv: csvPath,
+          wallet_2_csv: compareCsv2,
+          wallet_1_chain: chain,
+          wallet_2_chain: compareChain2,
+        }),
+      });
+      const data = await response.json();
+      setCompareResult(data);
+    } catch (err) {
+      setCompareResult({ error: "Comparison failed. Check inputs." });
+    } finally {
+      setCompareLoading(false);
+    }
   };
 
   // Timeline event counts (chart ke liye)
@@ -274,6 +307,64 @@ function InvestigationDashboard() {
               )}
             </div>
 
+{/* Sprint 14 Day 6: Cross-Chain Wallet Comparison */}
+            <div className="card wide">
+              <h2>Compare With Another Wallet</h2>
+              <div className="input-panel">
+                <input
+                  type="text"
+                  placeholder="Second Wallet Address"
+                  value={compareWallet2}
+                  onChange={(e) => setCompareWallet2(e.target.value)}
+                />
+                <input
+                  type="text"
+                  placeholder="Second Wallet CSV Path"
+                  value={compareCsv2}
+                  onChange={(e) => setCompareCsv2(e.target.value)}
+                />
+                <select value={compareChain2} onChange={(e) => setCompareChain2(e.target.value)}>
+                  {SUPPORTED_CHAINS.filter((c) => c.active).map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+                <button onClick={runComparison} disabled={compareLoading}>
+                  {compareLoading ? "Comparing..." : "Compare"}
+                </button>
+              </div>
+
+              {compareResult && !compareResult.error && (
+                <>
+                  <p><strong>Confidence:</strong> {compareResult.confidence}% ({compareResult.classification})</p>
+
+                  {compareResult.cross_chain_pair && compareResult.cross_chain_evidence && (
+                    <div className="explanation-box">
+                      <h3>Cross-Chain Evidence</h3>
+                      <p><strong>Source Chain:</strong> {compareResult.wallet_1_chain}</p>
+                      <p><strong>Destination Chain:</strong> {compareResult.wallet_2_chain}</p>
+                      <p>
+                        <strong>Bridge Evidence:</strong>{" "}
+                        {compareResult.cross_chain_evidence.bridge_evidence_detected ? "Detected" : "Not Detected"}
+                      </p>
+                      <p><strong>Cross-Chain Score:</strong> {compareResult.cross_chain_evidence.score}</p>
+                      <p>
+                        <strong>Status:</strong>{" "}
+                        {compareResult.cross_chain_evidence.available ? "Available" : "Unavailable"}
+                      </p>
+                    </div>
+                  )}
+
+                  <p><strong>Evidence:</strong></p>
+                  <ul>
+                    {compareResult.explanation.map((item, i) => (
+                      <li key={i}>{item}</li>
+                    ))}
+                  </ul>
+                </>
+              )}
+              {compareResult && compareResult.error && <p className="error">{compareResult.error}</p>}
+            </div>
+            
             <div className="card">
               <h2>Recommendation</h2>
               <p className="priority">{report.recommendation.priority}</p>
