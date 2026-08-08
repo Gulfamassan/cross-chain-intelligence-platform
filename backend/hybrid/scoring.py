@@ -122,24 +122,30 @@ class HybridScorer:
         (attribution/cross_chain_evidence.py) instead of the structural
         0 that the graph produces (see Sprint 14 Day 5 finding).
 
-        Returns same shape as calculate_relationship_score(), plus a
-        "source" field.
+        Returns same shape as calculate_relationship_score(), plus
+        "source", "available", and "evidence" fields.
         """
         if chain_1 == chain_2:
             result = self.calculate_relationship_score(graph, wallet_1, wallet_2)
             result["source"] = "graph"
+            result["available"] = True
+            result["evidence"] = []
             return result
 
         from attribution.cross_chain_evidence import calculate_cross_chain_evidence
-        evidence = calculate_cross_chain_evidence(
+        evidence_result = calculate_cross_chain_evidence(
             wallet_1_csv, wallet_1, chain_1, wallet_2_csv, wallet_2, chain_2
         )
 
+        source = "bridge_evidence" if evidence_result["matched_pairs"] > 0 else "no_bridge_activity"
+
         return {
-            "relationship_score": evidence["score"] if evidence["score"] is not None else 0.0,
+            "relationship_score": evidence_result["score"],
             "common_neighbors_count": 0,
-            "source": evidence["source"],
-            "matched_bridge_pairs": evidence["matched_pairs"],
+            "source": source,
+            "available": evidence_result["available"],
+            "evidence": evidence_result["evidence"],
+            "matched_bridge_pairs": evidence_result["matched_pairs"],
         }
     
     def get_risk_score(self, csv_path: str, wallet_address: str, chain: str) -> float:

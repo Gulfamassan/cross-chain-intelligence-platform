@@ -30,26 +30,28 @@ def calculate_cross_chain_evidence(wallet_1_csv: str, wallet_1: str, chain_1: st
     outgoing bridge activity (on chain_1) and wallet_2's incoming
     transactions (on chain_2).
 
-    Returns:
-        dict: {
-            "score": float (0-100),
-            "source": "bridge_evidence" | "no_bridge_activity" | "unavailable",
-            "matched_pairs": int,
-        }
-        "unavailable" only occurs if a CSV genuinely cannot be read.
-        A wallet with no bridge activity is a real, checked answer (0.0),
-        not a missing one.
+    Returns a relationship-evidence record. "available" is explicit —
+    False means the CSVs genuinely could not be read; True means a
+    real (possibly 0) result was computed. This avoids conflating
+    "we checked and found nothing" with "we couldn't check."
     """
+    base = {
+        "wallet_1": wallet_1,
+        "chain_1": chain_1,
+        "wallet_2": wallet_2,
+        "chain_2": chain_2,
+        "relationship_type": "cross_chain",
+    }
+
     try:
         df_1 = pd.read_csv(wallet_1_csv)
         df_2 = pd.read_csv(wallet_2_csv)
     except (FileNotFoundError, pd.errors.EmptyDataError):
-        return {"score": None, "source": "unavailable", "matched_pairs": 0}
+        return {**base, "score": 0.0, "evidence": [], "matched_pairs": 0, "available": False}
 
     transactions_1 = df_1.to_dict("records")
     transactions_2 = df_2.to_dict("records")
 
-    # Step 1: wallet_1's transactions that touch a known bridge on chain_1
     bridge_txs = bridge_detector.detect_bridge_transactions(transactions_1, chain_1)
     wallet_1_bridge_txs = [
         tx for tx in bridge_txs
@@ -57,9 +59,8 @@ def calculate_cross_chain_evidence(wallet_1_csv: str, wallet_1: str, chain_1: st
     ]
 
     if not wallet_1_bridge_txs:
-        return {"score": 0.0, "source": "no_bridge_activity", "matched_pairs": 0}
+        return {**base, "score": 0.0, "evidence": [], "matched_pairs": 0, "available": True}
 
-    # Step 2: wallet_2's incoming transactions on chain_2
     wallet_2_key = wallet_2.lower()
     wallet_2_received_txs = [
         tx for tx in transactions_2
@@ -67,12 +68,11 @@ def calculate_cross_chain_evidence(wallet_1_csv: str, wallet_1: str, chain_1: st
     ]
 
     if not wallet_2_received_txs:
-        return {"score": 0.0, "source": "no_bridge_activity", "matched_pairs": 0}
+        return {**base, "score": 0.0, "evidence": [], "matched_pairs": 0, "available": True}
 
-    # Step 3: correlate every bridge-out tx with every receive tx using
-    # EXISTING heuristic rules (timing + amount) — reused, not duplicated
     best_score = 0.0
     matched_pairs = 0
+    evidence = []
 
     for bridge_tx in wallet_1_bridge_txs:
         for receive_tx in wallet_2_received_txs:
@@ -82,18 +82,22 @@ def calculate_cross_chain_evidence(wallet_1_csv: str, wallet_1: str, chain_1: st
             amount_score = heuristic_engine.rule_amount_match(
                 bridge_tx.get("value_eth"), receive_tx.get("value_eth")
             )
-            pair_score = timing_score + amount_score  # max 45 on heuristic_engine's own scale
+            pair_score = timing_score + amount_score
 
             if pair_score > 0:
                 matched_pairs += 1
+                if timing_score > 0 and "bridge_timing_match" not in evidence:
+                    evidence.append("bridge_timing_match")
+                if amount_score > 0 and "bridge_amount_match" not in evidence:
+                    evidence.append("bridge_amount_match")
 
             pair_score_100 = min(100, (pair_score / 45) * 100)
             best_score = max(best_score, pair_score_100)
 
-    source = "bridge_evidence" if matched_pairs > 0 else "no_bridge_activity"
-
     return {
+        **base,
         "score": round(best_score, 2),
-        "source": source,
+        "evidence": evidence,
         "matched_pairs": matched_pairs,
+        "available": True,
     }
