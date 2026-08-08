@@ -35,12 +35,17 @@ This document summarizes the main endpoint groups. All request/response schemas 
 ## Risk
 - `POST /risk/analyze` — full risk breakdown (bridge usage, mixer interaction, high frequency, blacklist hits, rapid transfers, large transactions)
 
+## Entity Resolution, Classification & Explainability
+- `POST /entity/resolve` — classifies a wallet's entity type (Exchange / Bridge / Smart Contract / Personal / Unknown), given an explicit `csv_path`. Checks a known-address list first, then falls back to a rule-based heuristic classifier. Returns `label`, `confidence`, `confidence_percent`, `source` (`known_list` or `heuristic`), and `evidence`.
+- `POST /entity/classify` — simplified version of `/entity/resolve`; auto-resolves the transaction dataset from `wallet_address` + `chain` by convention (`datasets/{chain}/{wallet_address}.csv`), no `csv_path` required. Returns `classification` and `confidence` only.
+- `POST /entity/explain` — combined explainable AI report for a wallet. Runs both entity classification and explainable risk scoring, merges their evidence into one list, and returns a human-readable `explanation` sentence alongside the raw `features` used — so the dashboard can show "Why?" instead of a bare score.
+
 ## Joint Intelligence
-- `POST /intelligence/report` — complete investigation report: wallet summary, AI/risk info, text summary, timeline, and recommendation
+- `POST /intelligence/report` — complete investigation report: wallet summary (including entity classification, confidence, and evidence — Sprint 12/13), AI/risk info, text summary, timeline, and recommendation (now also references entity type). This is the primary investigator-facing endpoint; most individual analysis endpoints above exist for standalone/dedicated use, but a full investigation should generally go through this one.
 
 ## Neo4j
 - `POST /neo4j/import` — import the current graph into Neo4j
-- `GET /neo4j/wallet/{address}` — wallet connections from Neo4j
+- `GET /neo4j/wallet/{address}` — wallet connections from Neo4j, **plus its Knowledge Graph entity classification** (`entity_type`, `neo4j_labels`) and `chain` (extended in Sprint 13)
 - `GET /neo4j/neighbors/{address}` — direct neighbors
 - `GET /neo4j/path?wallet_1=...&wallet_2=...` — shortest path between two wallets
 - `GET /neo4j/community` — cluster/community detection
@@ -58,5 +63,5 @@ This document summarizes the main endpoint groups. All request/response schemas 
 
 ## Standard Error Responses
 - `400` — invalid input (e.g., malformed wallet address, unsupported chain, graph not built yet)
-- `404` — resource not found (e.g., CSV file missing)
+- `404` — resource not found (e.g., CSV file missing, or no dataset found for a wallet/chain in `/entity/classify` and `/entity/explain`)
 - `500` — unexpected server error (should not occur under normal use; report if seen)

@@ -109,7 +109,39 @@ class HybridScorer:
             "relationship_score": round(relationship_score, 2),
             "common_neighbors_count": len(common),
         }
+    def calculate_relationship_score_cross_chain_aware(self, graph, wallet_1: str, chain_1: str,
+                                                          wallet_1_csv: str, wallet_2: str,
+                                                          chain_2: str, wallet_2_csv: str) -> dict:
+        """
+        Sprint 14 Day 6 — targeted, additive improvement.
 
+        Same-chain pairs: behaves identically to calculate_relationship_score()
+        (graph-based) — no behavior change.
+
+        Cross-chain pairs: falls back to bridge-timing/amount evidence
+        (attribution/cross_chain_evidence.py) instead of the structural
+        0 that the graph produces (see Sprint 14 Day 5 finding).
+
+        Returns same shape as calculate_relationship_score(), plus a
+        "source" field.
+        """
+        if chain_1 == chain_2:
+            result = self.calculate_relationship_score(graph, wallet_1, wallet_2)
+            result["source"] = "graph"
+            return result
+
+        from attribution.cross_chain_evidence import calculate_cross_chain_evidence
+        evidence = calculate_cross_chain_evidence(
+            wallet_1_csv, wallet_1, chain_1, wallet_2_csv, wallet_2, chain_2
+        )
+
+        return {
+            "relationship_score": evidence["score"] if evidence["score"] is not None else 0.0,
+            "common_neighbors_count": 0,
+            "source": evidence["source"],
+            "matched_bridge_pairs": evidence["matched_pairs"],
+        }
+    
     def get_risk_score(self, csv_path: str, wallet_address: str, chain: str) -> float:
         """
         Risk Engine se asli risk score nikalta hai.

@@ -8,7 +8,7 @@ A blockchain intelligence research prototype that analyzes wallet behavior, buil
 
 Most blockchain explorers show raw transaction data. This platform goes further — it collects on-chain data across multiple blockchains, builds a graph of wallet relationships, extracts behavioral features, generates AI-based graph embeddings (Node2Vec), and combines all of this into a **Hybrid Attribution Engine** that produces an explainable confidence score for whether two wallets (possibly on different chains) belong to the same real-world entity.
 
-The system also includes a **Risk Intelligence Engine**, **Neo4j graph database integration**, a **React investigation dashboard**, and **PDF/CSV/JSON report export** — making it a complete, demoable investigation tool rather than just a set of APIs.
+The system also includes a **Risk Intelligence Engine**, **Entity Resolution & Wallet Classification**, an **Explainable AI layer**, **Neo4j Knowledge Graph integration**, a **React investigation dashboard**, and **PDF/CSV/JSON report export** — making it a complete, demoable investigation tool rather than just a set of APIs.
 
 ---
 
@@ -21,9 +21,12 @@ The system also includes a **Risk Intelligence Engine**, **Neo4j graph database 
 - **AI Layer** — Node2Vec graph embeddings with cosine-similarity comparison
 - **Hybrid Attribution Engine** — configurable-weight fusion of rule-based, AI, relationship, and risk scores with human-readable explanations
 - **Risk Intelligence Engine** — bridge usage, mixer interaction, high-frequency behavior, blacklist checks, rapid transfers, large transactions
+- **Entity Resolution & Wallet Classification** — classifies wallets as Exchange, Bridge, Smart Contract, Personal, or Unknown, using a known-address list with a rule-based heuristic fallback
+- **Explainable AI (XAI)** — every classification, risk score, and relationship confidence comes with a human-readable evidence list, not just a raw number
+- **Knowledge Graph Enrichment** — Neo4j graph extended beyond simple wallet/transaction nodes with entity-type labels, Chain nodes, and cross-chain `BRIDGED_TO` / `INTERACTS` relationships
 - **Neo4j Integration** — graph import, wallet lookups, neighbor queries, shortest path, community detection
 - **Joint Intelligence Layer** — combines every engine into a single investigation report with a timeline, evidence chain, and recommendation
-- **Investigation Dashboard (React)** — multi-chain wallet analysis with charts (timeline, risk distribution, chain distribution) and an embedded interactive wallet network graph
+- **Investigation Dashboard (React)** — multi-chain wallet analysis with charts (timeline, risk distribution, chain distribution), an embedded interactive wallet network graph, and an Entity Intelligence panel with classification, confidence, and explanation
 - **Report Export** — professional PDF reports, plus CSV and JSON export
 - **Performance Layer** — timing instrumentation, in-memory caching, Neo4j indexes
 
@@ -80,7 +83,11 @@ Dashboard available at `http://localhost:5173`
 | `POST /ai/train` | Train Node2Vec embeddings |
 | `POST /risk/analyze` | Run risk analysis on a wallet |
 | `POST /hybrid/analyze` | Cross-chain wallet attribution (rule + AI + risk fusion) |
-| `POST /intelligence/report` | Full joint intelligence report |
+| `POST /intelligence/report` | Full joint intelligence report (attribution + risk + entity + evidence + timeline) |
+| `POST /entity/resolve` | Classify a wallet's entity type with full evidence (Exchange/Bridge/Contract/Personal) |
+| `POST /entity/classify` | Simplified entity classification (auto-resolves dataset by wallet + chain) |
+| `POST /entity/explain` | Combined explainable AI report — entity classification + risk, with reasons ("Why?") |
+| `GET /neo4j/wallet/{address}` | Wallet details from Neo4j, including entity-type labels and chain |
 | `POST /report/generate` | Generate downloadable PDF report |
 | `GET /export/pdf` \| `/csv` \| `/json` | Export investigation data |
 | `POST /neo4j/import` | Import graph into Neo4j |
@@ -94,16 +101,17 @@ Full interactive documentation: `http://127.0.0.1:8000/docs`
 
 \`\`\`
 backend/
-├── api/            # FastAPI route handlers
+├── api/            # FastAPI route handlers (including entity.py, explainability.py)
 ├── blockchain/      # Chain-specific collectors (Ethereum, Polygon, Arbitrum)
-├── attribution/      # Bridge detection, similarity, heuristics, entity resolution
+├── attribution/      # Bridge detection, similarity, heuristics, entity resolution, evidence builder
+├── entity_labeling/    # Wallet entity classification (label engine, classifier, known-address database)
 ├── analytics/        # Centrality, clustering, relationship, shortest-path
 ├── ai/               # Node2Vec embeddings + similarity model
 ├── hybrid/            # Fusion engine, confidence classification, explanations
-├── risk/              # Risk engine, indicators, blacklist, scoring
-├── intelligence/       # Joint intelligence: aggregator, summary, timeline, recommendation
+├── risk/              # Risk engine, indicators, blacklist, scoring, risk explainer (XAI)
+├── intelligence/       # Joint intelligence: aggregator, summary, narrative timeline, search engine, recommendation
 ├── graph/              # Graph builder + visualization
-├── database/            # Neo4j client, repository, loader
+├── database/            # Neo4j client, repository, loader, knowledge graph builder
 ├── evaluation/           # Metrics, benchmarking, experiments, visualization
 ├── reports/               # PDF report generation
 ├── export/                 # CSV/JSON/PDF export wrappers
@@ -118,7 +126,7 @@ backend/
 
 frontend/
 └── src/
-    ├── InvestigationDashboard.jsx
+    ├── InvestigationDashboard.jsx   # Includes Entity Intelligence panel (classification, confidence, evidence, explanation)
     └── InvestigationDashboard.css
 \`\`\`
 
@@ -126,7 +134,11 @@ frontend/
 
 ## 📸 Screenshots
 
-_(Add dashboard and PDF report screenshots here before presenting.)_
+- Investigation Dashboard — multi-chain wallet analysis with charts and Wallet Network graph
+- Entity Intelligence panel — entity type, confidence, evidence, and "View Explanation" breakdown
+- Swagger API documentation (`/docs`) — full endpoint list including entity resolution and explainability APIs
+
+_(Insert actual screenshot images here before final submission — see `frontend/docs/` or the chat history for reference captures.)_
 
 ---
 
@@ -147,9 +159,17 @@ Feature Extractor    Node2Vec AI Embeddings
    ↓                        ↓
         Hybrid Attribution Engine
                 ↓
-        Risk Engine ──► Joint Intelligence Layer
+        Risk Engine
                 ↓
-     PDF / CSV / JSON Reports  +  React Dashboard
+        Entity Resolution & Wallet Classification
+                ↓
+        Explainable AI Layer (evidence for every decision)
+                ↓
+        Knowledge Graph Enrichment (Neo4j: entity labels, Chain nodes, BRIDGED_TO)
+                ↓
+        Joint Intelligence Layer
+                ↓
+     PDF / CSV / JSON Reports  +  React Dashboard (Entity Intelligence panel)
 \`\`\`
 
 ---
@@ -170,5 +190,7 @@ Feature Extractor    Node2Vec AI Embeddings
 - Add Tron, Optimism, and Avalanche collectors
 - Build a true cross-chain graph (currently graph analytics is per-chain only)
 - Replace sample bridge/blacklist addresses with verified production data sources
+- Complete real bridge-usage and smart-contract-usage detection in the feature extraction layer (currently placeholders in `WalletProfile`)
 - Graph Neural Network (GNN) models (GCN/GAT/GraphSAGE) as a further AI layer
 - Multi-wallet batch investigation and case management in the GUI
+- Expand the Knowledge Graph with `Token` nodes once a token-level data source is available
