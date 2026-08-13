@@ -25,6 +25,9 @@ function InvestigationDashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Sprint 16 Day 1: Fetch Data button state
+  const [fetchLoading, setFetchLoading] = useState(false);
+
   // Sprint 13 Day 7 additions
   const [explanation, setExplanation] = useState(null);
   const [explanationLoading, setExplanationLoading] = useState(false);
@@ -35,6 +38,31 @@ function InvestigationDashboard() {
   const [compareChain2, setCompareChain2] = useState("polygon");
   const [compareResult, setCompareResult] = useState(null);
   const [compareLoading, setCompareLoading] = useState(false);
+
+  // Sprint 16 Day 1: fetch raw transaction data from the blockchain
+  // collector, so the GUI does not require a manual Swagger call
+  // before analysis can be run.
+  const fetchWalletData = async () => {
+    if (!wallet) {
+      setError("Enter a wallet address first.");
+      return;
+    }
+    setFetchLoading(true);
+    setError("");
+    try {
+      const response = await fetch(`${API_BASE}/wallet/${chain}/${wallet}/transactions`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch wallet transactions.");
+      }
+      await response.json();
+      // Backend saves to datasets/{chain}/{address}.csv by convention
+      setCsvPath(`datasets/${chain}/${wallet}.csv`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setFetchLoading(false);
+    }
+  };
 
   const runInvestigation = async () => {
     setLoading(true);
@@ -96,6 +124,17 @@ function InvestigationDashboard() {
   const scrollToGraph = () => {
     const graphEl = document.querySelector(".chart-box.wide");
     if (graphEl) graphEl.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // Sprint 16 Day 1: open a report export in a new tab, so the GUI
+  // does not require a manual Swagger call for PDF/CSV/JSON export.
+  const downloadExport = (format) => {
+    const params = new URLSearchParams({
+      wallet: wallet,
+      csv_path: csvPath,
+      chain: chain,
+    });
+    window.open(`${API_BASE}/export/${format}?${params.toString()}`, "_blank");
   };
 
   // Sprint 14 Day 6: compare current wallet against a second wallet
@@ -177,6 +216,9 @@ function InvestigationDashboard() {
             <option key={c.id} value={c.id}>{c.name}</option>
           ))}
         </select>
+        <button onClick={fetchWalletData} disabled={fetchLoading}>
+          {fetchLoading ? "Fetching..." : "Fetch Data"}
+        </button>
         <button onClick={runInvestigation} disabled={loading}>
           {loading ? "Analyzing..." : "Analyze"}
         </button>
@@ -307,7 +349,17 @@ function InvestigationDashboard() {
               )}
             </div>
 
-{/* Sprint 14 Day 6: Cross-Chain Wallet Comparison */}
+            {/* Sprint 16 Day 1: Download Report card */}
+            <div className="card">
+              <h2>Download Report</h2>
+              <div className="entity-actions">
+                <button onClick={() => downloadExport("pdf")}>PDF</button>
+                <button onClick={() => downloadExport("csv")}>CSV</button>
+                <button onClick={() => downloadExport("json")}>JSON</button>
+              </div>
+            </div>
+
+            {/* Sprint 14 Day 6: Cross-Chain Wallet Comparison */}
             <div className="card wide">
               <h2>Compare With Another Wallet</h2>
               <div className="input-panel">
@@ -364,7 +416,7 @@ function InvestigationDashboard() {
               )}
               {compareResult && compareResult.error && <p className="error">{compareResult.error}</p>}
             </div>
-            
+
             <div className="card">
               <h2>Recommendation</h2>
               <p className="priority">{report.recommendation.priority}</p>
