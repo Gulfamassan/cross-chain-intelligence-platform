@@ -106,8 +106,6 @@ class FusionEngine:
         self.weights = self._load_weights()
 
         if relationship_score is None:
-            # Redistribute the relationship weight proportionally across
-            # rule, embedding, and risk (keeping their relative ratios).
             w_rule = self.weights.get("rule", 0.40)
             w_embedding = self.weights.get("embedding", 0.35)
             w_relationship = self.weights.get("relationship", 0.15)
@@ -115,7 +113,6 @@ class FusionEngine:
 
             remaining_total = w_rule + w_embedding + w_risk
             if remaining_total == 0:
-                # Degenerate config safeguard — fall back to equal split
                 w_rule = w_embedding = w_risk = 1 / 3
             else:
                 scale = (w_rule + w_embedding + w_risk + w_relationship) / remaining_total
@@ -144,7 +141,6 @@ class FusionEngine:
                 "signal_excluded": "relationship",
             }
 
-        # relationship_score is a real number — behave identically to baseline
         final_confidence = (
             rule_score * self.weights.get("rule", 0.40) +
             embedding_score * self.weights.get("embedding", 0.35) +
@@ -161,6 +157,73 @@ class FusionEngine:
             "final_confidence": round(final_confidence, 2),
             "signal_excluded": None,
         }
-    
+
+    def combine_scores_with_entity_agreement(self, rule_score: float, embedding_score: float,
+                                                relationship_score: float, risk_score: float,
+                                                entity_agreement_score: float | None) -> dict:
+        """
+        Sprint 15 Day 3 — EXPERIMENTAL fusion, adds the entity agreement
+        signal (attribution/entity_agreement.py) as a fifth input.
+
+        This is NOT the production fusion — combine_scores() remains
+        the baseline/current version, completely unchanged. This method
+        exists purely to run a controlled Current vs Experimental
+        comparison (see evaluation/run_entity_agreement_fusion_experiment.py).
+
+        entity_agreement_score of None means the signal was UNKNOWN
+        (see entity_agreement.py) — it is excluded from the weighted
+        sum entirely (not treated as 0), and its weight is NOT
+        redistributed here; the comparison script computes both a
+        "weight excluded" and reports the raw config weight so the
+        effect is fully visible, not hidden by renormalization.
+
+        Args:
+            rule_score, embedding_score, relationship_score, risk_score: same as combine_scores()
+            entity_agreement_score: float (0-100) if MATCH/NO_MATCH, or None if UNKNOWN
+
+        Returns:
+            dict: same shape as combine_scores(), plus entity_agreement fields
+        """
+        self.weights = self._load_weights()
+        w_entity = self.weights.get("entity_agreement", 0.0)
+
+        if entity_agreement_score is None:
+            final_confidence = (
+                rule_score * self.weights.get("rule", 0.40) +
+                embedding_score * self.weights.get("embedding", 0.35) +
+                relationship_score * self.weights.get("relationship", 0.15) +
+                risk_score * self.weights.get("risk", 0.10)
+            )
+            return {
+                "rule_score": round(rule_score, 2),
+                "embedding_score": round(embedding_score, 2),
+                "relationship_score": round(relationship_score, 2),
+                "risk_score": round(risk_score, 2),
+                "entity_agreement_score": None,
+                "entity_agreement_weight_used": 0.0,
+                "weights_used": self.weights,
+                "final_confidence": round(final_confidence, 2),
+            }
+
+        final_confidence = (
+            rule_score * self.weights.get("rule", 0.40) +
+            embedding_score * self.weights.get("embedding", 0.35) +
+            relationship_score * self.weights.get("relationship", 0.15) +
+            risk_score * self.weights.get("risk", 0.10) +
+            entity_agreement_score * w_entity
+        )
+
+        return {
+            "rule_score": round(rule_score, 2),
+            "embedding_score": round(embedding_score, 2),
+            "relationship_score": round(relationship_score, 2),
+            "risk_score": round(risk_score, 2),
+            "entity_agreement_score": round(entity_agreement_score, 2),
+            "entity_agreement_weight_used": w_entity,
+            "weights_used": self.weights,
+            "final_confidence": round(final_confidence, 2),
+        }
+
+
 # Ek single instance banate hain jo poore project mein import hoga
 fusion_engine = FusionEngine()

@@ -1,6 +1,7 @@
 {
-    "rule": 0.40,
-    "embedding": 0.35,
-    "relationship": 0.15,
-    "risk": 0.10
+    "rule": 0.38,
+    "embedding": 0.33,
+    "relationship": 0.14,
+    "risk": 0.10,
+    "entity_agreement": 0.05
 }
