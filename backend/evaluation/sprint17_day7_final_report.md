@@ -103,11 +103,55 @@ use kar raha hai), lekin n=7 itna chhota hai ke isay "improvement" ya
 **behavior qualitatively different hai**, jo further investigation
 ka wajah hai.
 
-## Agla Kadam (Recommendation, decision nahi)
+### 6. XGBoost (n=4 training — pipeline demonstration only)
+- **Genuine, informative failure:** Feature importances sab `0.0`,
+  predictions sab probability `0.5` — model ne **literally kuch nahi
+  seekha**. `n=4` training examples itne kam the ke koi bhi tree-split
+  nahi bana (root-node hi reh gaya).
+- Model effectively "hamesha Related predict karo" jaisa constant
+  output de raha hai (GraphSAGE ke "hamesha Unrelated" collapse ka
+  bilkul opposite) — held-out `1/3` accuracy sirf coincidence hai
+  (ek hi genuine Related case tha, jo is trivial baseline se
+  automatically "correct" nikal gaya).
+- **Fail — lekin ye ek EXPECTED aur PREDICTED fail tha**, jo humne
+  training se pehle hi flag kiya tha. Ye khud proof hai ke
+  n=4/n=7 ka data volume kisi bhi supervised classical ML method
+  (chahe kitna bhi accha ho) ko fairly evaluate karne ke liye kaafi
+  nahi hai.
 
-Reliable conclusion ke liye:
-1. Zyada labelled wallet-pairs chahiye (n=7 se n=30-50+, taake
-   train/dev/held-out sab meaningful ho sakein)
-2. Cross-Chain GraphSAGE ke false positives (Case 1, 2) ko
-   specifically investigate karna — kya `same_address` edge
-   over-weighted ho raha hai model ke decision mein
+---
+
+## Updated Research Progression — Final State
+
+| Stage | Method | Related Recovered | Verdict |
+|---|---|---|---|
+| 1 | Rule | 0/3 | Fail — behavioral thresholds exchange wallets ke liye kaam nahi karte |
+| 2 | Node2Vec | 0/3 | Fail — majority-class collapse |
+| 3 | Hybrid | 0/3 | Fail — fusion in cases ke liye favorable nahi |
+| 4 | XGBoost (n=4) | 1/3* | **Invalid** — model ne kuch nahi seekha (constant output) |
+| 5 | GraphSAGE | 0/3 | Fail — majority-class collapse (opposite direction se XGBoost) |
+| 6 | Cross-Chain GraphSAGE | 0/3 | Fail — lekin akela method jo kabhi "Related" predict karta hai (miscalibrated) |
+
+*\*Statistically meaningless — coincidental result se ek trivial constant classifier ka.*
+
+## Research Question — Honest Answer (per naya framing)
+
+> "Determine whether graph-based representation learning improves
+> cross-chain wallet attribution over rule-based behavioral similarity."
+
+**Is n=7 dataset ke saath, ye question reliably answer NAHI ki ja
+sakti.** Koi bhi method (chahe simple rule, chahe GNN) related cases
+detect nahi kar pa raha — is wajah se "GraphSAGE ne improve kiya ya
+nahi" ka koi statistically meaningful comparison possible nahi hai.
+Jo cheez clear hai: **saare methods ka bottleneck data volume hai,
+model complexity nahi** — na Rule, na Node2Vec, na XGBoost, na
+GraphSAGE ke paas is chhote dataset se seekhne ke liye kaafi signal
+hai.
+
+**Genuine, defensible conclusion (agar report/thesis mein likhna ho):**
+*"Is n=7 case-study ke sath, hum GNN-based approaches ke bare mein
+koi statistically valid claim nahi kar sakte — na positive, na
+negative. Cross-Chain GraphSAGE ka miscalibrated-lekin-non-trivial
+behavior (Day 7) ek weak signal hai ke graph structure kuch dikha
+raha hai, lekin isay confirm karne ke liye kaafi zyada labeled data
+chahiye hoga (recommend: n=30+)."*
