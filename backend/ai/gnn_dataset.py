@@ -84,9 +84,20 @@ def _active_days_for_node(graph: nx.DiGraph, node) -> int:
 
 def _dominant_chain_for_node(graph: nx.DiGraph, node) -> int:
     """
-    Node se touch hone wale edges mein sabse zyada frequent chain
-    dhoondta hai aur uska encoded id deta hai.
+    Node ka chain determine karta hai.
+
+    Day 7 update: cross-chain unified graph (`graph/cross_chain_graph.py`)
+    mein node par pehle se hi ek authoritative `chain` attribute hota hai
+    (kyunki node identity khud `(address, chain)` hai) — agar wo maujood
+    hai, seedha wahi use karte hain (zyada reliable, kyunki edges mein
+    se infer karne ki zaroorat nahi). Warna (purane single-chain graphs
+    ke liye, jahan node par chain attribute nahi hota), purani
+    edge-se-infer-karne wali approach fallback ke taur par chalti hai.
     """
+    node_attrs = graph.nodes[node]
+    if "chain" in node_attrs and node_attrs["chain"] is not None:
+        return _encode_chain(node_attrs["chain"])
+
     chains = []
     for _, _, data in graph.out_edges(node, data=True):
         chains.append(data.get("chain"))

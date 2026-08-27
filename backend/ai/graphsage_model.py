@@ -87,19 +87,38 @@ class SAGELayer(nn.Module):
     non-linearity apply karta hai. Ye Node2Vec se bunyadi farq hai —
     Node2Vec sirf graph structure (random walks) dekhta hai, GraphSAGE
     actual node features ko neighbors ke saath "mix" karta hai.
+
+    Day 7 fix (embedding collapse bug, Sprint 17 Day 5 finding):
+    Pehle har layer `ReLU` + `L2-normalize` dono use karta tha. Chhote
+    graphs par ReLU "dead neurons" bana deta tha (poora vector negative
+    -> poora vector zero), aur har intermediate layer par normalize
+    karne se ye zero-vectors aur bhi jaldi collapse ho jate the — jis
+    se saare-ke-saare embeddings ya to identical (score=1.0) ya zero
+    (score=0.0) ban rahe the. Fix:
+      - `LeakyReLU` (ReLU ki jagah) — negative values ko poora zero
+        nahi karta, sirf chhota kar deta hai, isliye "dead" nahi hota.
+      - Normalize sirf FINAL layer par (`normalize=True` flag) —
+        intermediate layers raw scale mein rehte hain, taake unka
+        signal collapse na ho.
     """
 
     def __init__(self, in_dim: int, out_dim: int):
         super().__init__()
         self.linear = nn.Linear(in_dim * 2, out_dim)
+        self.activation = nn.LeakyReLU(negative_slope=0.1)
 
-    def forward(self, self_feats: torch.Tensor, neigh_feats: torch.Tensor) -> torch.Tensor:
+    def forward(self, self_feats: torch.Tensor, neigh_feats: torch.Tensor,
+                normalize: bool = False) -> torch.Tensor:
         combined = torch.cat([self_feats, neigh_feats], dim=1)
         out = self.linear(combined)
-        out = F.relu(out)
-        # L2 normalize — embeddings ko unit length par rakhta hai,
-        # cosine similarity comparison ke liye ye zaroori hai
-        out = F.normalize(out, p=2, dim=1)
+        out = self.activation(out)
+
+        if normalize:
+            # Sirf final layer par L2 normalize karte hain — cosine
+            # similarity comparison ke liye zaroori hai, lekin
+            # intermediate layers ko is se bachate hain (collapse fix)
+            out = F.normalize(out, p=2, dim=1)
+
         return out
 
 
@@ -127,11 +146,12 @@ class GraphSAGENet(nn.Module):
         Returns:
             torch.Tensor: (N, out_dim) final wallet embeddings
         """
-        h1 = self._propagate(self.layer1, features, adjacency)
-        h2 = self._propagate(self.layer2, h1, adjacency)
+        h1 = self._propagate(self.layer1, features, adjacency, normalize=False)
+        h2 = self._propagate(self.layer2, h1, adjacency, normalize=True)
         return h2
 
-    def _propagate(self, layer: SAGELayer, h: torch.Tensor, adjacency: list) -> torch.Tensor:
+    def _propagate(self, layer: SAGELayer, h: torch.Tensor, adjacency: list,
+                    normalize: bool = False) -> torch.Tensor:
         num_nodes = h.shape[0]
         neigh_agg = torch.zeros_like(h)
 
@@ -143,7 +163,7 @@ class GraphSAGENet(nn.Module):
                 # Koi neighbor nahi (isolated node) — apne hi features use karo
                 neigh_agg[i] = h[i]
 
-        return layer(h, neigh_agg)
+        return layer(h, neigh_agg, normalize=normalize)
 
 
 class GraphSAGETrainer:
