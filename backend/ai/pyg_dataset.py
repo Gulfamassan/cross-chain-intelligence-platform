@@ -1,5 +1,6 @@
 """
 Sprint 18, Day 2 — Graph Dataset Preparation (PyG format)
+Sprint 18, Day 4 fix — Feature normalization added
 
 Ye module NetworkX graph ko asal `torch_geometric.data.Data` object
 mein convert karta hai, 8 node features ke saath:
@@ -10,6 +11,16 @@ mein convert karta hai, 8 node features ke saath:
 
 Sprint 17 ka `_active_days_for_node()` helper reuse kiya hai
 (`ai/gnn_dataset.py` se) — dobara nahi likha.
+
+Day 4 fix: Training ke dauran loss astronomically high (~2977) aa raha
+tha aur accuracy unstable thi — root cause ye tha ke raw features
+(jaise total_sent, jo bade/unbounded numbers hote hain) bina normalize
+kiye seedha model mein ja rahe the, jisse gradients explode ho rahe
+the. Sprint 17 Day 7 mein humne yehi masla GraphSAGE ke custom
+implementation mein fix kiya tha — ab yahan bhi same fix (log1p +
+standardize) apply kar rahe hain. Saari 8 features non-negative hain
+(Sprint 17 ke chain_id jaisa koi negative value nahi), isliye log1p
+seedha sab columns par safely chal sakta hai.
 """
 
 import numpy as np
@@ -72,9 +83,40 @@ def build_node_feature_matrix(graph: nx.DiGraph, nodes: list) -> np.ndarray:
     return np.array(feature_rows, dtype=np.float32)
 
 
-def build_pyg_dataset(graph: nx.DiGraph):
+def normalize_feature_matrix(x: torch.Tensor) -> torch.Tensor:
+    """
+    Feature matrix ko training ke liye normalize karta hai (log1p +
+    standardize). Saari 8 features non-negative hain, isliye log1p
+    seedha sab columns par safely lagta hai (Sprint 17 Day 7 jaisa
+    chain_id ka negative-value special-case yahan zaroori nahi).
+
+    Args:
+        x (torch.Tensor): (num_nodes, 8) raw feature matrix
+
+    Returns:
+        torch.Tensor: (num_nodes, 8) normalized feature matrix
+    """
+    matrix = x.numpy().copy()
+    matrix = np.log1p(matrix)
+
+    mean = matrix.mean(axis=0)
+    std = matrix.std(axis=0)
+    std[std == 0] = 1.0  # divide-by-zero se bachne ke liye
+
+    matrix = (matrix - mean) / std
+
+    return torch.tensor(matrix, dtype=torch.float32)
+
+
+def build_pyg_dataset(graph: nx.DiGraph, normalize: bool = True):
     """
     Poora pipeline: NetworkX graph -> torch_geometric.data.Data
+
+    Args:
+        graph: NetworkX DiGraph
+        normalize (bool): Features normalize karni hain ya nahi
+            (default True — training ke liye zaroori hai; False
+            sirf raw-inspection/debugging ke liye useful hai)
 
     Returns:
         (Data, list, dict): PyG Data object, node_list (index -> address),
@@ -85,6 +127,9 @@ def build_pyg_dataset(graph: nx.DiGraph):
 
     x_matrix = build_node_feature_matrix(graph, nodes)
     x = torch.tensor(x_matrix, dtype=torch.float32)
+
+    if normalize:
+        x = normalize_feature_matrix(x)
 
     sources, targets = [], []
     for u, v in graph.edges():

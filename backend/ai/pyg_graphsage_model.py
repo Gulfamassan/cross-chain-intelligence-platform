@@ -56,16 +56,25 @@ class PyGGraphSAGE(torch.nn.Module):
         self.conv2 = SAGEConv(hidden_dim, out_dim)
         self.dropout = dropout
 
-    def forward(self, x: torch.Tensor, edge_index: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, edge_index: torch.Tensor,
+                normalize: bool = True) -> torch.Tensor:
         h = self.conv1(x, edge_index)
         h = F.relu(h)
         # Dropout sirf training mode mein active hota hai (self.training flag) —
         # eval/inference ke waqt automatically off ho jata hai (PyTorch default)
         h = F.dropout(h, p=self.dropout, training=self.training)
         h = self.conv2(h, edge_index)
-        h = F.normalize(h, p=2, dim=1)
-        return h
 
+        if normalize:
+            # Inference/similarity-comparison ke liye normalize karte hain
+            # (cosine similarity ke liye zaroori). Training loss (Day 4)
+            # ke waqt normalize=False use hota hai — raw (unbounded)
+            # dot-products BCE loss ko behtar confidently train karne
+            # dete hain (normalized dot-product hamesha -1..1 tak
+            # bounded rehta, jo loss ko "flatten" kar deta hai).
+            h = F.normalize(h, p=2, dim=1)
+
+        return h
 
 def classify_pair(embedding_a: torch.Tensor, embedding_b: torch.Tensor,
                    threshold: float = 0.5) -> dict:
