@@ -10,9 +10,9 @@ from pydantic import BaseModel
 
 from api.graph import current_graph
 from ai.node2vec_model import node2vec_trainer
-from ai.graphsage_model import graphsage_trainer
 from ai.graphsage_model import graphsage_trainer, classify_relation
 from ai.similarity_model import embedding_similarity
+from ai.wallet_embeddings import classify_wallet_pair
 
 router = APIRouter()
 
@@ -128,20 +128,44 @@ def compare_wallet_similarity_graphsage(request: SimilarityRequest):
         HTTPException: If embeddings haven't been trained yet (400),
                         or a wallet isn't found in the embeddings (404)
     """
-    embeddings = graphsage_trainer.load_embeddings()
-
-    if not embeddings:
-        raise HTTPException(
-            status_code=400,
-            detail="No trained GraphSAGE embeddings found. Call /ai/graphsage/train first."
-        )
-
     try:
         result = embedding_similarity.compare_wallets(
             embeddings, request.wallet_1, request.wallet_2
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+    # Day 3 baseline: score ko simple "Related"/"Unrelated" label mein bhi convert karo
     result["relation"] = classify_relation(result["ai_similarity"])
+
+    return result
+
+
+@router.post("/ai/pyg-graphsage/similarity")
+def compare_wallet_similarity_pyg_graphsage(request: SimilarityRequest):
+    """
+    Sprint 18 Day 6 — Real torch_geometric GraphSAGE (Sprint 17 ke
+    custom-implementation GraphSAGE se alag) ka wallet-pair similarity.
+
+    Args:
+        request (SimilarityRequest): Both wallets' addresses
+
+    Returns:
+        dict: {"wallet_1", "wallet_2", "score", "classification"}
+
+    Raises:
+        HTTPException: If embeddings haven't been generated yet (400),
+                        or a wallet isn't found in the embeddings (404)
+    """
+    try:
+        result = classify_wallet_pair(request.wallet_1, request.wallet_2)
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=400,
+            detail="No trained PyG GraphSAGE embeddings found. Run "
+                   "evaluation.run_pyg_graphsage_training then ai.wallet_embeddings first."
+        )
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
     return result

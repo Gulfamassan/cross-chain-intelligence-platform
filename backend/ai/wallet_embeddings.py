@@ -99,6 +99,51 @@ def load_embeddings() -> dict:
         return pickle.load(f)
 
 
+def classify_wallet_pair(wallet_1: str, wallet_2: str, threshold: float = 0.5) -> dict:
+    """
+    Sprint 18 Day 6 — Wallet Pair Classification.
+
+    Do wallets ke saved embeddings (Day 5 se) le kar unhe compare
+    karta hai, aur "Related"/"Unrelated" classify karta hai.
+
+    Threshold 0.5 rakha hai (Sprint 17 ke `classify_relation()` jaisa
+    hi convention) — taake pichle experiments (Rule, Node2Vec, XGBoost,
+    custom GraphSAGE) ke saath comparison consistent rahe.
+
+    Args:
+        wallet_1, wallet_2 (str): Wallet addresses
+        threshold (float): Is se upar "Related" (default 0.5)
+
+    Returns:
+        dict: {"wallet_1": ..., "wallet_2": ..., "score": ..., "classification": ...}
+
+    Raises:
+        KeyError: Agar wallet ka embedding maujood nahi (graph mein nahi tha)
+    """
+    embeddings = load_embeddings()
+
+    wallet_1_lower = wallet_1.lower()
+    wallet_2_lower = wallet_2.lower()
+
+    if wallet_1_lower not in embeddings:
+        raise KeyError(f"Wallet not found in trained embeddings: {wallet_1}")
+    if wallet_2_lower not in embeddings:
+        raise KeyError(f"Wallet not found in trained embeddings: {wallet_2}")
+
+    embedding_a = torch.tensor(embeddings[wallet_1_lower])
+    embedding_b = torch.tensor(embeddings[wallet_2_lower])
+
+    score = F.cosine_similarity(embedding_a.unsqueeze(0), embedding_b.unsqueeze(0)).item()
+    classification = "Related" if score >= threshold else "Unrelated"
+
+    return {
+        "wallet_1": wallet_1,
+        "wallet_2": wallet_2,
+        "score": round(score, 4),
+        "classification": classification,
+    }
+
+
 if __name__ == "__main__":
     """
     Run: python -m ai.wallet_embeddings
@@ -143,3 +188,12 @@ if __name__ == "__main__":
     print()
 
     print(f"Saved {len(embeddings)} wallet embeddings to {EMBEDDINGS_PATH}")
+
+    # --- Day 6: Wallet Pair Classification demo ---
+    print("\n" + "=" * 50)
+    print("Day 6 — Wallet Pair Classification")
+    print("=" * 50)
+    import json
+
+    result = classify_wallet_pair(wallet_a, wallet_b)
+    print(json.dumps(result, indent=2))
