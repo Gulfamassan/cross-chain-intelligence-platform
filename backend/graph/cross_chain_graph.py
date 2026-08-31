@@ -36,11 +36,20 @@ from entity_labeling.label_database import lookup_known_address
 
 def _node_id(address: str, chain: str) -> str:
     """
-    Composite node identity banata hai: "address__chain".
+    Composite node identity banata hai: "chain:address".
     Isse same address alag chains pe alag nodes banti hain
     (jab tak explicitly same_address edge se link na ho).
+
+    IMPORTANT (Sprint 19 Day 1 clarification): Same address 2 chains
+    pe hona automatically same real-world entity hone ka proof NAHI
+    hai — isliye hum address ko blindly merge NAHI karte. Har
+    (address, chain) apna alag node hai; agar same address multiple
+    chains pe mile, unhe sirf ek `same_address` EVIDENCE edge se
+    connect karte hain (dekhein `_add_same_address_edges()`) — merge
+    nahi karte. Model khud seekh sakta hai ke ye evidence kitni
+    strong hai, hum khud decide nahi karte.
     """
-    return f"{address.lower()}__{chain.lower()}"
+    return f"{chain.lower()}:{address.lower()}"
 
 
 def build_unified_graph(wallet_chain_csvs: list) -> nx.MultiDiGraph:
@@ -67,7 +76,16 @@ def build_unified_graph(wallet_chain_csvs: list) -> nx.MultiDiGraph:
 
     # Step 1: Har chain ka data load karke same-chain transaction edges add karo
     for csv_path, chain in wallet_chain_csvs:
-        df = pd.read_csv(csv_path)
+        try:
+            df = pd.read_csv(csv_path)
+        except pd.errors.EmptyDataError:
+            # Khaali/corrupt CSV — skip karte hain, poora process crash
+            # nahi hona chahiye ek badi file ki wajah se
+            print(f"  [skipped] Empty/unreadable CSV: {csv_path}")
+            continue
+
+        if df.empty:
+            continue
 
         for _, row in df.iterrows():
             sender = row.get("from_address")
@@ -133,7 +151,14 @@ def _add_bridge_edges(graph: nx.MultiDiGraph, wallet_chain_csvs: list):
     (edge attribute ke taur par, node pe bhi ek marker attribute).
     """
     for csv_path, chain in wallet_chain_csvs:
-        df = pd.read_csv(csv_path)
+        try:
+            df = pd.read_csv(csv_path)
+        except pd.errors.EmptyDataError:
+            continue
+
+        if df.empty:
+            continue
+
         transactions = df.to_dict("records")
 
         bridge_txs = bridge_detector.detect_bridge_transactions(transactions, chain)
@@ -218,3 +243,42 @@ def add_transfer_linkage_edges(graph: nx.MultiDiGraph, wallet_chain_pairs: list,
                     score=evidence["score"],
                     evidence=evidence["evidence"],
                 )
+
+
+if __name__ == "__main__":
+    """
+    Sprint 19, Day 1 sanity check — saare 3 chains (Ethereum, Polygon,
+    Arbitrum) ke available CSVs ko ek unified graph mein combine karta hai.
+
+    Run: python -m graph.cross_chain_graph
+    """
+    import os
+    from collections import Counter
+
+    wallet_chain_csvs = []
+    chains_found = set()
+
+    for chain in ["ethereum", "polygon", "arbitrum"]:
+        chain_folder = os.path.join("datasets", chain)
+        if not os.path.isdir(chain_folder):
+            continue
+        for filename in os.listdir(chain_folder):
+            if filename.endswith(".csv"):
+                wallet_chain_csvs.append((os.path.join(chain_folder, filename), chain))
+                chains_found.add(chain.capitalize())
+
+    graph = build_unified_graph(wallet_chain_csvs)
+
+    print("Unified graph created successfully\n")
+    print("Chains:")
+    for chain in sorted(chains_found):
+        print(f"  {chain}")
+    print()
+    print("Total nodes:", graph.number_of_nodes())
+    print("Total edges:", graph.number_of_edges())
+    print()
+
+    edge_categories = Counter(d.get("edge_category") for _, _, d in graph.edges(data=True))
+    print("Edge categories:")
+    for category, count in edge_categories.items():
+        print(f"  {category}: {count}")
