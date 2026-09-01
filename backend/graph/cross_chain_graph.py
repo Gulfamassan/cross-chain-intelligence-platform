@@ -31,7 +31,27 @@ import networkx as nx
 
 from attribution.bridge_detector import bridge_detector
 from attribution.cross_chain_evidence import calculate_cross_chain_evidence
+from attribution.entity_agreement import calculate_entity_agreement
+from attribution.similarity import similarity_engine
 from entity_labeling.label_database import lookup_known_address
+from features.extractor import feature_extractor
+
+# Sprint 19 Day 3 — combined evidence weights.
+# Random nahi hain — project mein pehle se maujood signal-strength
+# conventions se derive kiye hain:
+#   - Bridge/timing/amount evidence: `calculate_cross_chain_evidence()`
+#     khud strongest signal hai (isay "strong" isliye kaha kyunki ye
+#     tabhi non-zero hota hai jab wallet ne WAAQAI koi bridge
+#     transaction ki ho — ek hard prerequisite, sirf similarity nahi)
+#   - Entity evidence: known-exchange/entity match — medium-strong
+#   - Behavioral evidence: amount/frequency similarity — sabse weak
+#     (Sprint 17 mein humne dekha ye akela kabhi reliable nahi tha)
+CROSS_CHAIN_EVIDENCE_WEIGHTS = {
+    "bridge_timing_amount": 0.5,
+    "entity": 0.3,
+    "behavioral": 0.2,
+}
+CROSS_CHAIN_EDGE_THRESHOLD = 50  # Sprint 17/18 ke "Related" threshold jaisa hi convention
 
 
 def _node_id(address: str, chain: str) -> str:
@@ -245,6 +265,126 @@ def add_transfer_linkage_edges(graph: nx.MultiDiGraph, wallet_chain_pairs: list,
                 )
 
 
+def calculate_combined_cross_chain_score(wallet_1: str, chain_1: str, csv_1: str,
+                                           wallet_2: str, chain_2: str, csv_2: str) -> dict:
+    """
+    Sprint 19, Day 3 — Multiple evidence types ko ek weighted score
+    mein combine karta hai. Koi bhi single similarity signal akela
+    hard edge create nahi karta — sab evidence ka weighted-average
+    lete hain, phir threshold se check karte hain.
+
+    Evidence sources (sab EXISTING, already-tested modules se):
+        1. bridge_timing_amount -> attribution/cross_chain_evidence.py
+           (jo khud bridge_detector + heuristics timing/amount reuse
+           karta hai — pehle se hi properly weighted: timing=25,
+           amount=20, normalize kiya hua)
+        2. entity -> attribution/entity_agreement.py
+        3. behavioral -> attribution/similarity.py (amount + frequency
+           similarity ka average)
+
+    Returns:
+        dict: {"score": float (0-100), "breakdown": dict, "accepted": bool}
+    """
+    bridge_result = calculate_cross_chain_evidence(csv_1, wallet_1, chain_1, csv_2, wallet_2, chain_2)
+    bridge_score = bridge_result["score"]
+
+    profile_1 = feature_extractor.get_wallet_summary(csv_1, wallet_1, chain_1).to_dict()
+    profile_2 = feature_extractor.get_wallet_summary(csv_2, wallet_2, chain_2).to_dict()
+
+    entity_result = calculate_entity_agreement(wallet_1, profile_1, False, wallet_2, profile_2, False)
+    entity_score = entity_result["score"] or 0.0
+
+    amount_sim = similarity_engine.compare_average_value(profile_1, profile_2)
+    frequency_sim = similarity_engine.compare_transaction_frequency(profile_1, profile_2)
+    behavioral_score = ((amount_sim + frequency_sim) / 2) * 100
+
+    combined_score = (
+        bridge_score * CROSS_CHAIN_EVIDENCE_WEIGHTS["bridge_timing_amount"] +
+        entity_score * CROSS_CHAIN_EVIDENCE_WEIGHTS["entity"] +
+        behavioral_score * CROSS_CHAIN_EVIDENCE_WEIGHTS["behavioral"]
+    )
+
+    return {
+        "score": round(combined_score, 2),
+        "breakdown": {
+            "bridge_timing_amount": round(bridge_score, 2),
+            "entity": round(entity_score, 2),
+            "behavioral": round(behavioral_score, 2),
+        },
+        "accepted": combined_score >= CROSS_CHAIN_EDGE_THRESHOLD,
+    }
+
+
+def add_weighted_cross_chain_evidence_edges(graph: nx.MultiDiGraph, wallet_chain_csvs: list) -> dict:
+    """
+    Sprint 19, Day 3 — Bridge-users ko candidate ban ke, doosre chains
+    ke wallets ke saath weighted-evidence check karta hai, aur SIRF
+    threshold paar karne wale pairs ko edge deta hai.
+
+    Candidate generation scope: sirf wo wallets jinho ne kam-se-kam
+    ek bridge transaction ki ho (bridge_detector se) — poore O(n^2)
+    combination ki jagah, kyunki bridge-use hi cross-chain relationship
+    ka natural prerequisite hai (jaisa `calculate_cross_chain_evidence`
+    khud bhi gate karta hai).
+
+    Returns:
+        dict: {"candidates_checked": int, "edges_accepted": int}
+    """
+    # Chain ke hisaab se wallets group karte hain, aur bridge-users dhoondte hain
+    wallets_by_chain = {}
+    bridge_users_by_chain = {}
+
+    for csv_path, chain in wallet_chain_csvs:
+        try:
+            df = pd.read_csv(csv_path)
+        except pd.errors.EmptyDataError:
+            continue
+        if df.empty:
+            continue
+
+        chain_wallets = set(df["from_address"].dropna().str.lower()) | \
+                         set(df["to_address"].dropna().str.lower())
+        wallets_by_chain.setdefault(chain, {}).update({w: csv_path for w in chain_wallets})
+
+        transactions = df.to_dict("records")
+        bridge_txs = bridge_detector.detect_bridge_transactions(transactions, chain)
+        for tx in bridge_txs:
+            sender = str(tx.get("from_address", "")).lower()
+            if sender:
+                bridge_users_by_chain.setdefault(chain, {})[sender] = csv_path
+
+    candidates_checked = 0
+    edges_accepted = 0
+
+    for chain_1, bridge_users in bridge_users_by_chain.items():
+        for wallet_1, csv_1 in bridge_users.items():
+            for chain_2, wallets_2 in wallets_by_chain.items():
+                if chain_2 == chain_1:
+                    continue
+                for wallet_2, csv_2 in wallets_2.items():
+                    if wallet_1 == wallet_2:
+                        continue  # same_address edge already isay handle karta hai
+
+                    candidates_checked += 1
+                    result = calculate_combined_cross_chain_score(
+                        wallet_1, chain_1, csv_1, wallet_2, chain_2, csv_2
+                    )
+
+                    if result["accepted"]:
+                        node_1 = _node_id(wallet_1, chain_1)
+                        node_2 = _node_id(wallet_2, chain_2)
+                        if graph.has_node(node_1) and graph.has_node(node_2):
+                            graph.add_edge(
+                                node_1, node_2,
+                                edge_category="weighted_cross_chain_evidence",
+                                score=result["score"],
+                                breakdown=result["breakdown"],
+                            )
+                            edges_accepted += 1
+
+    return {"candidates_checked": candidates_checked, "edges_accepted": edges_accepted}
+
+
 if __name__ == "__main__":
     """
     Sprint 19, Day 1 sanity check — saare 3 chains (Ethereum, Polygon,
@@ -282,3 +422,16 @@ if __name__ == "__main__":
     print("Edge categories:")
     for category, count in edge_categories.items():
         print(f"  {category}: {count}")
+
+    # --- Day 3: Weighted cross-chain evidence edges ---
+    print("\n" + "=" * 50)
+    print("Day 3 — Weighted Cross-Chain Evidence")
+    print("=" * 50)
+
+    same_chain_edges = edge_categories.get("transaction", 0)
+
+    stats = add_weighted_cross_chain_evidence_edges(graph, wallet_chain_csvs)
+
+    print(f"Same-chain edges: {same_chain_edges}")
+    print(f"Cross-chain candidate edges: {stats['candidates_checked']}")
+    print(f"Confirmed/accepted evidence edges: {stats['edges_accepted']}")
