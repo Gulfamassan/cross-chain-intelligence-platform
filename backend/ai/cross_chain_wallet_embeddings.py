@@ -114,6 +114,46 @@ def load_embeddings() -> dict:
         return pickle.load(f)
 
 
+def classify_cross_chain_pair(wallet_1: str, wallet_2: str, threshold: float = 0.5) -> dict:
+    """
+    Sprint 19, Day 6 — Cross-Chain Pair Classification.
+
+    "Are these two wallets potentially related?" — input format
+    "chain:address" (jaisa `chain:0x...`), Day 1 ke node-identity
+    convention se match karta hai.
+
+    Threshold 0.5 — Sprint 17/18 ke convention jaisa hi, comparison
+    consistent rakhne ke liye.
+
+    Args:
+        wallet_1, wallet_2 (str): "chain:address" format (e.g. "ethereum:0xabc...")
+        threshold (float): Is se upar "Related" (default 0.5)
+
+    Returns:
+        dict: {"wallet_1", "wallet_2", "cross_chain", "score", "classification"}
+
+    Raises:
+        ValueError: Agar input format "chain:address" nahi hai
+        KeyError: Agar wallet ka embedding maujood nahi
+    """
+    if ":" not in wallet_1 or ":" not in wallet_2:
+        raise ValueError('Wallets "chain:address" format mein hone chahiye, e.g. "ethereum:0x..."')
+
+    chain_1, address_1 = wallet_1.split(":", 1)
+    chain_2, address_2 = wallet_2.split(":", 1)
+
+    result = compare_cross_chain_wallets(address_1, chain_1, address_2, chain_2)
+    score = result["cosine_similarity"]
+
+    return {
+        "wallet_1": wallet_1,
+        "wallet_2": wallet_2,
+        "cross_chain": chain_1.lower() != chain_2.lower(),
+        "score": score,
+        "classification": "Related" if score >= threshold else "Unrelated",
+    }
+
+
 if __name__ == "__main__":
     """
     Run: python -m ai.cross_chain_wallet_embeddings
@@ -152,3 +192,14 @@ if __name__ == "__main__":
         print(f"  Polygon Wallet:  {wallet_b}")
         print(f"  Cosine similarity: {result['cosine_similarity']}")
         print(f"  Note: {result['note']}")
+
+        # --- Day 6: Cross-Chain Pair Classification demo ---
+        print("\n" + "=" * 50)
+        print("Day 6 — Cross-Chain Pair Classification")
+        print("=" * 50)
+        import json
+
+        classification_result = classify_cross_chain_pair(
+            f"ethereum:{wallet_a}", f"polygon:{wallet_b}"
+        )
+        print(json.dumps(classification_result, indent=2))
