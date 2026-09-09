@@ -13,6 +13,8 @@ from ai.node2vec_model import node2vec_trainer
 from ai.graphsage_model import graphsage_trainer, classify_relation
 from ai.similarity_model import embedding_similarity
 from ai.wallet_embeddings import classify_wallet_pair
+from ai.pyg_graphsage_trainer import train_pyg_graphsage
+from ai.wallet_embeddings import save_embeddings as save_pyg_embeddings
 
 router = APIRouter()
 
@@ -128,6 +130,14 @@ def compare_wallet_similarity_graphsage(request: SimilarityRequest):
         HTTPException: If embeddings haven't been trained yet (400),
                         or a wallet isn't found in the embeddings (404)
     """
+    embeddings = graphsage_trainer.load_embeddings()
+
+    if not embeddings:
+        raise HTTPException(
+            status_code=400,
+            detail="No trained GraphSAGE embeddings found. Call /ai/graphsage/train first."
+        )
+
     try:
         result = embedding_similarity.compare_wallets(
             embeddings, request.wallet_1, request.wallet_2
@@ -139,6 +149,43 @@ def compare_wallet_similarity_graphsage(request: SimilarityRequest):
     result["relation"] = classify_relation(result["ai_similarity"])
 
     return result
+
+
+@router.post("/ai/pyg-graphsage/train")
+def train_pyg_graphsage_endpoint():
+    """
+    Sprint 20 Day 1 — Sprint 18 ka leakage-free PyG GraphSAGE training
+    (RandomLinkSplit + early stopping) ab `/build-graph` se bane
+    `current_graph` par API se chal sakta hai — pehle sirf terminal
+    script (`evaluation.run_pyg_graphsage_training`) se possible tha.
+
+    Returns:
+        dict: Training stats (best epoch, val loss, node/edge counts)
+
+    Raises:
+        HTTPException: Agar koi graph build nahi hua (400), ya graph
+                        itna chhota hai ke train/val split possible nahi (400)
+    """
+    if len(current_graph.get_nodes()) == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="No graph has been built yet. Call /build-graph first."
+        )
+
+    try:
+        result = train_pyg_graphsage(current_graph.graph)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    save_pyg_embeddings(result["embeddings"])
+
+    return {
+        "message": "PyG GraphSAGE trained successfully",
+        "best_epoch": result["best_epoch"],
+        "best_val_loss": result["best_val_loss"],
+        "num_nodes": result["num_nodes"],
+        "num_edges": result["num_edges"],
+    }
 
 
 @router.post("/ai/pyg-graphsage/similarity")

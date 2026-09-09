@@ -1,27 +1,3 @@
-from dotenv import load_dotenv
-import os
-
-# Load .env file
-load_dotenv()
-
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
-
-app = FastAPI()
-
-# CORS Enable کریں
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# باقی code...
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -44,6 +20,8 @@ from api.export import router as export_router
 from api.performance import router as performance_router
 from api.entity import router as entity_router
 from api.explainability import router as explainability_router
+from api.feature_ml import router as feature_ml_router
+from api.cross_chain_gnn import router as cross_chain_gnn_router
 
 app = FastAPI(
     title="Cross Chain Intelligence Platform",
@@ -81,6 +59,8 @@ app.include_router(export_router)
 app.include_router(performance_router)
 app.include_router(entity_router)
 app.include_router(explainability_router)
+app.include_router(feature_ml_router)
+app.include_router(cross_chain_gnn_router)
 
 
 
