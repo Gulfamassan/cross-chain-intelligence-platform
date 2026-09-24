@@ -163,6 +163,73 @@ function InvestigationDashboard() {
     }
   };
 
+   // Sprint 20 Day 5: GraphSAGE + Cross-Chain GNN scores for the same pair
+  // (existing Compare card ka hi extension — koi naya redesign nahi)
+  const [gnnResult, setGnnResult] = useState(null);
+  const [gnnLoading, setGnnLoading] = useState(false);
+
+  const fetchJsonOrThrow = async (url, options) => {
+    const response = await fetch(url, options);
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.detail || `Request failed (${response.status})`);
+    }
+    return data;
+  };
+
+  const runGnnAnalysis = async () => {
+    setGnnLoading(true);
+    setGnnResult({ graphsage: null, crossChain: null });
+
+    // --- GraphSAGE (single-chain) — Wallet A ke apne investigated graph par ---
+    // NOTE: Ye sirf tab kaam karega jab Wallet B, Wallet A ke graph ka
+    // node ho (uska direct counterparty ho). Agar wallets ek dusre se
+    // directly connected nahi hain single-chain graph mein, ye expected
+    // limitation hai — Cross-Chain GNN isi wajah se alag graph banata hai.
+    try {
+      await fetchJsonOrThrow(`${API_BASE}/ai/pyg-graphsage/train`, { method: "POST" });
+      const graphsageData = await fetchJsonOrThrow(`${API_BASE}/ai/pyg-graphsage/similarity`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ wallet_1: wallet, wallet_2: compareWallet2 }),
+      });
+      setGnnResult((prev) => ({ ...prev, graphsage: graphsageData }));
+    } catch (err) {
+      const message = (err.message || "").includes("not found in trained embeddings")
+        ? "Wallet B is not a direct counterparty of Wallet A in this single-chain graph, so no comparison is possible here. Try Cross-Chain GNN below instead."
+        : err.message || "GraphSAGE analysis failed.";
+      setGnnResult((prev) => ({ ...prev, graphsage: { error: message } }));
+    }
+
+    // --- Cross-Chain GNN — dono wallets ka apna graph banata hai ---
+    try {
+      await fetchJsonOrThrow(`${API_BASE}/cross-chain-gnn/build-graph`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          csvs: [
+            { csv_path: csvPath, chain: chain },
+            { csv_path: compareCsv2, chain: compareChain2 },
+          ],
+        }),
+      });
+      await fetchJsonOrThrow(`${API_BASE}/cross-chain-gnn/train`, { method: "POST" });
+      const crossChainData = await fetchJsonOrThrow(`${API_BASE}/cross-chain-gnn/similarity`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          wallet_1: `${chain}:${wallet}`,
+          wallet_2: `${compareChain2}:${compareWallet2}`,
+        }),
+      });
+      setGnnResult((prev) => ({ ...prev, crossChain: crossChainData }));
+    } catch (err) {
+      setGnnResult((prev) => ({ ...prev, crossChain: { error: err.message || "Cross-Chain GNN failed." } }));
+    }
+
+    setGnnLoading(false);
+  };
+
   // Timeline event counts (chart ke liye)
   const timelineChartData = report
     ? Object.entries(
@@ -383,7 +450,39 @@ function InvestigationDashboard() {
                 <button onClick={runComparison} disabled={compareLoading}>
                   {compareLoading ? "Comparing..." : "Compare"}
                 </button>
+                <button onClick={runGnnAnalysis} disabled={gnnLoading || !compareWallet2}>
+                  {gnnLoading ? "Running GNN..." : "Run GNN Analysis"}
+                </button>
               </div>
+
+              {gnnResult && (
+                <div className="explanation-box">
+                  <h3>GNN Scores</h3>
+                  {gnnResult.graphsage && (
+                    gnnResult.graphsage.error ? (
+                      <p className="error">GraphSAGE (single-chain): {gnnResult.graphsage.error}</p>
+                    ) : (
+                      <p>
+                        <strong>GraphSAGE (single-chain):</strong>{" "}
+                        {gnnResult.graphsage.score} ({gnnResult.graphsage.classification})
+                      </p>
+                    )
+                  )}
+                  {gnnResult.crossChain && (
+                    gnnResult.crossChain.error ? (
+                      <p className="error">Cross-Chain GNN: {gnnResult.crossChain.error}</p>
+                    ) : (
+                      <p>
+                        <strong>Cross-Chain GNN (unified graph):</strong>{" "}
+                        {gnnResult.crossChain.score} ({gnnResult.crossChain.classification})
+                      </p>
+                    )
+                  )}
+                </div>
+              
+              )}
+              
+              {gnnResult && gnnResult.error && <p className="error">{gnnResult.error}</p>}
 
               {compareResult && !compareResult.error && (
                 <>
